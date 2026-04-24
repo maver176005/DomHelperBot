@@ -1,0 +1,14 @@
+{
+  "name": "DomHelperBot",
+  "version": "1.0.0",
+  "description": "Telegram MVP bot for a house-scoped neighbor marketplace",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "check": "node --check src/index.js"
+  },
+  "private": true,
+  "dependencies": {
+    "telegraf": "^4.16.3"
+  }
+}
