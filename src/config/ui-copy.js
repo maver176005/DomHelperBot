@@ -7,7 +7,7 @@ const MENU = {
   AVAILABILITY: '🟢 Моя доступность',
   MY_HOUSE: '🏠 Мой дом',
   PROFILE: '✏️ Профиль',
-  FUTURE_MODULES: '🚧 Услуги и аренда',
+  FUTURE_MODULES: '🧰 Услуги и аренда',
   START_REGISTRATION: '🚀 Начать регистрацию',
 };
 

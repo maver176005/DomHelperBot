@@ -4,7 +4,6 @@ const { Telegraf, Markup, session } = require('telegraf');
 const {
   PAYMENT_OPTIONS,
   PROVIDER_AVAILABILITY,
-  SERVICE_TEMPLATES,
   URGENCY_OPTIONS,
 } = require('./config/app-data');
 const { MENU } = require('./config/ui-copy');
@@ -16,36 +15,61 @@ const {
   getServiceTemplate,
   priceLabel,
   statusLabel,
-  urgencyBadge,
   urgencyLabel,
   urgencyPriority,
 } = require('./domain/order-helpers');
+const { buildOrderFromListing } = require('./domain/listing-helpers');
+const {
+  isValidFloor,
+  isValidName,
+  isValidPhone,
+  isValidShortAddressPart,
+  normalizePhone,
+} = require('./domain/registration-validation');
+const {
+  assignedOrderText,
+  buildOrderSummary,
+  houseLabel,
+  listingCardText,
+  listingInterestText,
+  listingOrderCreatedText,
+  listingTypeLabel,
+  orderSummaryForProvider,
+  profileText,
+  publicOrderText,
+  roleLabel,
+} = require('./presentation/telegram-text');
+const {
+  CANCEL_TEXT,
+  CHANGE_URGENCY_TEXT,
+  FORCE_CREATE_TEXT,
+  getAvailabilityInlineKeyboard,
+  getAvailabilityWarningKeyboard,
+  getCancelKeyboard,
+  getListingInlineKeyboard,
+  getListingsInlineKeyboard,
+  getMainKeyboard,
+  getOrderInlineKeyboard,
+  getPaymentKeyboard,
+  getPopularServicesInlineKeyboard,
+  getProfileInlineKeyboard,
+  getRequestTypeInlineKeyboard,
+  getUrgencyKeyboard,
+} = require('./presentation/telegram-keyboards');
+const {
+  ensureDb,
+  readDb,
+  withDb,
+} = require('./storage/json-store');
+const {
+  notifyClientOrderAssigned,
+  notifyClientOrderCompleted,
+  notifyProviderOrderCancelled,
+  notifyProviderOrderConfirmed,
+  notifyProviders,
+} = require('./notifications/telegram-notifications');
 
 const ENV_PATH = path.join(__dirname, '..', '.env');
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const DB_PATH = path.join(DATA_DIR, 'db.json');
-
-const DEFAULT_DB = {
-  houses: [
-    {
-      id: 'house_1',
-      title: 'ЖК Северный, дом 1',
-      city: 'Москва',
-      address: 'ул. Примерная, 1',
-      isActive: true,
-    },
-    {
-      id: 'house_2',
-      title: 'ЖК Северный, дом 2',
-      city: 'Москва',
-      address: 'ул. Примерная, 2',
-      isActive: true,
-    },
-  ],
-  users: [],
-  orders: [],
-  listings: [],
-};
 
 const REGISTRATION_STEPS = {
   NAME: 'registration_name',
@@ -69,9 +93,11 @@ const ORDER_STEPS = {
   PHOTO_AFTER: 'trash_photo_after',
 };
 
-const CANCEL_TEXT = '❌ Отмена';
-const FORCE_CREATE_TEXT = '⚠️ Все равно создать';
-const CHANGE_URGENCY_TEXT = '🔄 Сменить срочность';
+const LISTING_STEPS = {
+  TITLE: 'listing_title',
+  DESCRIPTION: 'listing_description',
+  TERMS: 'listing_terms',
+};
 
 function loadEnvFile() {
   if (!fs.existsSync(ENV_PATH)) {
@@ -107,33 +133,6 @@ function loadEnvFile() {
   }
 }
 
-function ensureDb() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-
-  if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify(DEFAULT_DB, null, 2));
-  }
-}
-
-function readDb() {
-  ensureDb();
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-}
-
-function writeDb(db) {
-  ensureDb();
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
-}
-
-function withDb(mutator) {
-  const db = readDb();
-  const result = mutator(db);
-  writeDb(db);
-  return result;
-}
-
 function getTelegramUser(ctx) {
   return ctx.from || {};
 }
@@ -157,259 +156,8 @@ function generateId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function compactUserLabel(user) {
-  return [user.name, user.username ? `@${user.username}` : null].filter(Boolean).join(' ');
-}
-
 function isFinishedOrderStatus(status) {
   return ['confirmed', 'cancelled'].includes(status);
-}
-
-function getMainKeyboard(user) {
-  const buttons = [];
-
-  if (user) {
-    buttons.push([MENU.NEED_HELP, MENU.MY_ORDERS]);
-    buttons.push([MENU.COMPLETED_ORDERS]);
-    buttons.push([MENU.POPULAR]);
-    if (user.role === 'provider') {
-      buttons.push([MENU.HOUSE_REQUESTS]);
-      buttons.push([MENU.AVAILABILITY]);
-    }
-    buttons.push([MENU.MY_HOUSE, MENU.PROFILE]);
-    buttons.push([MENU.FUTURE_MODULES]);
-  } else {
-    buttons.push([MENU.START_REGISTRATION]);
-  }
-
-  return Markup.keyboard(buttons).resize();
-}
-
-function getCancelKeyboard() {
-  return Markup.keyboard([[CANCEL_TEXT]]).resize().oneTime();
-}
-
-function houseLabel(house) {
-  return `${house.title} (${house.address})`;
-}
-
-function roleLabel(role) {
-  if (role === 'provider') {
-    return 'Исполнитель';
-  }
-  return 'Заказчик';
-}
-
-function getAvailabilityInlineKeyboard() {
-  return Markup.inlineKeyboard([
-    [Markup.button.callback('🟢 Готов помочь сейчас', `availability:${PROVIDER_AVAILABILITY.READY_NOW}`)],
-    [Markup.button.callback('🕒 Смогу позже', `availability:${PROVIDER_AVAILABILITY.LATER}`)],
-    [Markup.button.callback('⛔ Не на связи', `availability:${PROVIDER_AVAILABILITY.OFFLINE}`)],
-  ]);
-}
-
-function getUrgencyKeyboard() {
-  return Markup.keyboard([
-    [URGENCY_OPTIONS[0].label],
-    [URGENCY_OPTIONS[1].label],
-    [URGENCY_OPTIONS[2].label],
-    [CANCEL_TEXT],
-  ]).resize().oneTime();
-}
-
-function getPaymentKeyboard() {
-  return Markup.keyboard([
-    [PAYMENT_OPTIONS[0], PAYMENT_OPTIONS[1]],
-    [PAYMENT_OPTIONS[2]],
-    [CANCEL_TEXT],
-  ]).resize().oneTime();
-}
-
-function getAvailabilityWarningKeyboard() {
-  return Markup.keyboard([
-    [FORCE_CREATE_TEXT],
-    [CHANGE_URGENCY_TEXT],
-    [CANCEL_TEXT],
-  ]).resize().oneTime();
-}
-
-function getRequestTypeInlineKeyboard() {
-  return Markup.inlineKeyboard(
-    SERVICE_TEMPLATES.map((service) => [
-      Markup.button.callback(service.title, `request_type:${service.key}`),
-    ])
-  );
-}
-
-function getPopularServicesInlineKeyboard(services) {
-  return Markup.inlineKeyboard(
-    services.map((service) => [
-      Markup.button.callback(
-        service.supported ? `Выбрать: ${service.title}` : `Скоро: ${service.title}`,
-        `popular_service:${service.key}`
-      ),
-    ])
-  );
-}
-
-function oppositeRole(role) {
-  return role === 'provider' ? 'client' : 'provider';
-}
-
-function getProfileInlineKeyboard(user) {
-  if (!user) {
-    return undefined;
-  }
-
-  return Markup.inlineKeyboard([
-    [Markup.button.callback(`Стать ${roleLabel(oppositeRole(user.role)).toLowerCase()}`, `switch_role:${oppositeRole(user.role)}`)],
-  ]);
-}
-
-function publicOrderText(order, client, house) {
-  if (order.type === 'service') {
-    return [
-      `${urgencyBadge(order.urgencyKey)} · ${getOrderDisplayTitle(order)} #${order.id}`,
-      `💰 Цена: ${priceLabel(order.price)}`,
-      `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-      `🏠 Дом: ${houseLabel(house)}`,
-      `💬 Запрос: ${order.comment || 'без описания'}`,
-      `💳 Условия: ${order.paymentMethod || 'договоримся'}`,
-      `🚪 Подъезд: ${client.entrance}`,
-      `🛗 Этаж: ${client.floor}`,
-      '🔒 Квартира: скрыта до взятия запроса',
-    ].join('\n');
-  }
-
-  return [
-    `${urgencyBadge(order.urgencyKey)} · 🗑 Новый заказ #${order.id}`,
-    `💰 Цена: ${priceLabel(order.price)}`,
-    `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
-    `📌 Статус: ${statusLabel(order.status)}`,
-    `🏠 Дом: ${houseLabel(house)}`,
-    `🛍 Пакетов: ${order.bagsCount}`,
-    `💬 Комментарий: ${order.comment || 'нет'}`,
-    `💳 Оплата: ${order.paymentMethod}`,
-    `🚪 Подъезд: ${client.entrance}`,
-    `🛗 Этаж: ${client.floor}`,
-    '🔒 Квартира: скрыта до взятия заказа',
-  ].join('\n');
-}
-
-function assignedOrderText(order, client, house) {
-  if (order.type === 'service') {
-    return [
-      `✅ ${getOrderDisplayTitle(order)} теперь ваш`,
-      `💰 Цена: ${priceLabel(order.price)}`,
-      `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-      `🏠 Дом: ${houseLabel(house)}`,
-      `👤 Клиент: ${compactUserLabel(client) || 'без имени'}`,
-      `💬 Запрос: ${order.comment || 'без описания'}`,
-      `💳 Условия: ${order.paymentMethod || 'договоримся'}`,
-      `🚪 Подъезд: ${client.entrance}`,
-      `🛗 Этаж: ${client.floor}`,
-      `🚪 Квартира: ${client.apartment}`,
-    ].join('\n');
-  }
-
-  return [
-    `✅ Заказ #${order.id} теперь ваш`,
-    `💰 Цена: ${priceLabel(order.price)}`,
-    `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
-    `📌 Статус: ${statusLabel(order.status)}`,
-    `🏠 Дом: ${houseLabel(house)}`,
-    `👤 Клиент: ${compactUserLabel(client) || 'без имени'}`,
-    `🛍 Пакетов: ${order.bagsCount}`,
-    `💬 Комментарий: ${order.comment || 'нет'}`,
-    `💳 Оплата: ${order.paymentMethod}`,
-    `🚪 Подъезд: ${client.entrance}`,
-    `🛗 Этаж: ${client.floor}`,
-    `🚪 Квартира: ${client.apartment}`,
-  ].join('\n');
-}
-
-function orderSummaryForClient(order, provider) {
-  if (order.type === 'service') {
-    return [
-      `${getOrderDisplayTitle(order)} #${order.id}`,
-      `💰 Цена: ${priceLabel(order.price)}`,
-      `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-      provider ? `🧰 Исполнитель: ${compactUserLabel(provider) || 'без имени'}` : '🧰 Исполнитель: еще не назначен',
-      `💬 Запрос: ${order.comment || 'без описания'}`,
-      `💳 Условия: ${order.paymentMethod || 'договоримся'}`,
-    ].join('\n');
-  }
-
-  return [
-    `📦 Заказ #${order.id}`,
-    `💰 Цена: ${priceLabel(order.price)}`,
-    `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
-    `📌 Статус: ${statusLabel(order.status)}`,
-    provider ? `🧰 Исполнитель: ${compactUserLabel(provider) || 'без имени'}` : '🧰 Исполнитель: еще не назначен',
-    `🛍 Пакетов: ${order.bagsCount}`,
-    `💬 Комментарий: ${order.comment || 'нет'}`,
-    `💳 Оплата: ${order.paymentMethod}`,
-  ].join('\n');
-}
-
-function orderSummaryForProvider(order, client) {
-  if (order.type === 'service') {
-    return [
-      `${getOrderDisplayTitle(order)} #${order.id}`,
-      `💰 Цена: ${priceLabel(order.price)}`,
-      `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-      `👤 Клиент: ${compactUserLabel(client) || 'без имени'}`,
-      `💬 Запрос: ${order.comment || 'без описания'}`,
-      `💳 Условия: ${order.paymentMethod || 'договоримся'}`,
-    ].join('\n');
-  }
-
-  return [
-    `📦 Заказ #${order.id}`,
-    `💰 Цена: ${priceLabel(order.price)}`,
-    `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
-    `📌 Статус: ${statusLabel(order.status)}`,
-    `👤 Клиент: ${compactUserLabel(client) || 'без имени'}`,
-    `🛍 Пакетов: ${order.bagsCount}`,
-    `💬 Комментарий: ${order.comment || 'нет'}`,
-    `💳 Оплата: ${order.paymentMethod}`,
-  ].join('\n');
-}
-
-function getOrderInlineKeyboard(order, user) {
-  if (!user) {
-    return undefined;
-  }
-
-  const buttons = [
-    [Markup.button.callback('Открыть заказ', `view_order:${order.id}`)],
-  ];
-
-  if (order.clientUserId === user.id && order.status === 'created') {
-    buttons.push([Markup.button.callback('Отменить заказ', `cancel_order:${order.id}`)]);
-  }
-
-  if (
-    order.clientUserId === user.id &&
-    (order.type === 'trash_removal' || order.type === 'service') &&
-    isFinishedOrderStatus(order.status)
-  ) {
-    buttons.push([Markup.button.callback('Повторить заказ', `repeat_order:${order.id}`)]);
-  }
-
-  return Markup.inlineKeyboard(buttons);
-}
-
-function buildOrderSummary(order, db, user) {
-  const provider = db.users.find((item) => item.id === order.providerUserId);
-  const client = db.users.find((item) => item.id === order.clientUserId);
-  return user.role === 'provider'
-    ? orderSummaryForProvider(order, client)
-    : orderSummaryForClient(order, provider);
 }
 
 async function showOrderDetails(ctx, orderId) {
@@ -543,29 +291,8 @@ async function showMyHouse(ctx) {
   }
 
   const house = getHouse(user.houseId);
-  const lines = [
-    `👤 Профиль: ${user.name}`,
-    `🎭 Роль: ${roleLabel(user.role)}`,
-    `📱 Телефон: ${user.phone}`,
-    `🏠 Дом: ${house ? houseLabel(house) : 'не найден'}`,
-    `🚪 Подъезд: ${user.entrance}`,
-    `🛗 Этаж: ${user.floor}`,
-    `🔑 Квартира: ${user.apartment}`,
-  ];
-
-  if (user.role === 'provider') {
-    lines.push(`🟢 Доступность: ${availabilityLabel(user.availabilityStatus)}`);
-  }
-
-  lines.push('');
-  lines.push('✏️ Чтобы обновить профиль или сменить дом, нажмите "Профиль".');
-  lines.push('🔄 Чтобы быстро сменить сценарий использования, нажмите кнопку ниже.');
-  if (user.role === 'provider') {
-    lines.push('🟢 Доступность можно поменять кнопкой "Моя доступность".');
-  }
-
   await ctx.reply(
-    lines.join('\n'),
+    profileText(user, house),
     {
       ...getMainKeyboard(user),
       ...getProfileInlineKeyboard(user),
@@ -878,126 +605,140 @@ function getBestPhotoFileId(ctx) {
   return photos[photos.length - 1].file_id;
 }
 
-async function notifyProviders(bot, order) {
-  const db = readDb();
-  const client = db.users.find((user) => user.id === order.clientUserId);
-  const house = db.houses.find((item) => item.id === order.houseId);
-  const providers = db.users.filter(
-    (user) => user.houseId === order.houseId && user.role === 'provider' && user.telegramId !== client.telegramId
-  );
-
-  const message = publicOrderText(order, client, house);
-  const buttons = Markup.inlineKeyboard([
-    Markup.button.callback('Взять запрос', `take_order:${order.id}`),
-  ]);
-
-  for (const provider of providers) {
-    try {
-      if (order.photoBeforeFileId) {
-        await bot.telegram.sendPhoto(provider.telegramId, order.photoBeforeFileId, {
-          caption: message,
-          ...buttons,
-        });
-      } else {
-        await bot.telegram.sendMessage(provider.telegramId, message, {
-          ...buttons,
-        });
-      }
-    } catch (error) {
-      console.error(`Failed to notify provider ${provider.telegramId}:`, error.message);
-    }
-  }
-
-  return providers.length;
-}
-
-async function notifyClientOrderAssigned(bot, order, provider) {
-  const db = readDb();
-  const client = db.users.find((user) => user.id === order.clientUserId);
-  if (!client) {
+async function showListingsHub(ctx) {
+  const user = getUserByTelegramId(ctx.from.id);
+  if (!user) {
+    await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
     return;
   }
 
-  await bot.telegram.sendMessage(
-    client.telegramId,
+  const db = readDb();
+  const activeCount = db.listings.filter(
+    (listing) => listing.houseId === user.houseId && listing.status === 'active'
+  ).length;
+
+  await ctx.reply(
     [
-      `Запрос #${order.id} взят в работу.`,
-      `🧰 Исполнитель: ${compactUserLabel(provider) || 'без имени'}`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-    ].join('\n')
+      '🧰 Услуги и аренда',
+      '',
+      'Здесь соседи публикуют, что могут сделать или дать во временное пользование.',
+      `Активных предложений в вашем доме: ${activeCount}.`,
+    ].join('\n'),
+    {
+      ...getMainKeyboard(user),
+      ...getListingsInlineKeyboard(),
+    }
   );
 }
 
-async function notifyClientOrderCompleted(bot, order) {
-  const db = readDb();
-  const client = db.users.find((user) => user.id === order.clientUserId);
-  if (!client) {
+async function showHouseListings(ctx) {
+  const user = getUserByTelegramId(ctx.from.id);
+  if (!user) {
+    await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
     return;
   }
 
-  const buttons = Markup.inlineKeyboard([
-    Markup.button.callback('Подтвердить выполнение', `confirm_order:${order.id}`),
-  ]);
+  const db = readDb();
+  const listings = db.listings
+    .filter((listing) => listing.houseId === user.houseId && listing.status === 'active')
+    .slice(-10)
+    .reverse();
 
-  if (order.photoAfterFileId) {
-    await bot.telegram.sendPhoto(client.telegramId, order.photoAfterFileId, {
-      caption: [
-        `📸 Исполнитель прислал фото после по заказу #${order.id}.`,
-        `📌 Статус: ${statusLabel(order.status)}`,
-        '✅ Подтвердите выполнение.',
-      ].join('\n'),
-      ...buttons,
+  if (!listings.length) {
+    await ctx.reply('📭 В вашем доме пока нет активных предложений.', {
+      ...getMainKeyboard(user),
+      ...getListingsInlineKeyboard(),
     });
     return;
   }
 
-  await bot.telegram.sendMessage(
-    client.telegramId,
+  await ctx.reply('🔎 Активные предложения дома', getMainKeyboard(user));
+  for (const listing of listings) {
+    const owner = db.users.find((item) => item.id === listing.ownerUserId);
+    const inlineKeyboard = getListingInlineKeyboard(listing, user);
+    await ctx.reply(listingCardText(listing, owner), {
+      ...getMainKeyboard(user),
+      ...(inlineKeyboard || {}),
+    });
+  }
+}
+
+async function showMyListings(ctx) {
+  const user = getUserByTelegramId(ctx.from.id);
+  if (!user) {
+    await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
+    return;
+  }
+
+  const db = readDb();
+  const listings = db.listings
+    .filter((listing) => listing.ownerUserId === user.id)
+    .slice(-10)
+    .reverse();
+
+  if (!listings.length) {
+    await ctx.reply('📭 Вы пока не добавляли предложения.', {
+      ...getMainKeyboard(user),
+      ...getListingsInlineKeyboard(),
+    });
+    return;
+  }
+
+  await ctx.reply('📋 Мои предложения', getMainKeyboard(user));
+  for (const listing of listings) {
+    const inlineKeyboard = getListingInlineKeyboard(listing, user);
+    await ctx.reply(listingCardText(listing, user, { showOwner: false }), {
+      ...getMainKeyboard(user),
+      ...(inlineKeyboard || {}),
+    });
+  }
+}
+
+function startListingFlow(ctx, user, type) {
+  if (!user) {
+    return showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
+  }
+
+  ctx.session.flow = {
+    type: 'listing',
+    step: LISTING_STEPS.TITLE,
+    data: { listingType: type },
+  };
+
+  return ctx.reply(
     [
-      `✅ Исполнитель отметил запрос #${order.id} как выполненный.`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-      'Подтвердите выполнение.',
+      `${listingTypeLabel(type)}`,
+      'Введите короткое название предложения.',
+      type === 'rental' ? 'Например: Дам дрель на вечер' : 'Например: Соберу шкаф',
     ].join('\n'),
-    {
-      ...buttons,
-    }
+    getCancelKeyboard()
   );
 }
 
-async function notifyProviderOrderConfirmed(bot, order) {
-  const db = readDb();
-  const provider = db.users.find((user) => user.id === order.providerUserId);
-  const client = db.users.find((user) => user.id === order.clientUserId);
+async function createListingFromFlow(ctx, user, flow) {
+  const listing = withDb((db) => {
+    const newListing = {
+      id: generateId('listing'),
+      type: flow.data.listingType,
+      status: 'active',
+      houseId: user.houseId,
+      ownerUserId: user.id,
+      title: flow.data.title,
+      description: flow.data.description,
+      terms: flow.data.terms,
+      createdAt: new Date().toISOString(),
+    };
 
-  if (!provider) {
-    return;
-  }
+    db.listings.push(newListing);
+    return newListing;
+  });
 
-  await bot.telegram.sendMessage(
-    provider.telegramId,
-    [
-      `🎉 Клиент подтвердил заказ #${order.id}.`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-      client ? `👤 Клиент: ${compactUserLabel(client) || 'без имени'}` : null,
-    ].filter(Boolean).join('\n')
-  );
-}
-
-async function notifyProviderOrderCancelled(bot, order) {
-  const db = readDb();
-  const provider = db.users.find((user) => user.id === order.providerUserId);
-
-  if (!provider) {
-    return;
-  }
-
-  await bot.telegram.sendMessage(
-    provider.telegramId,
-    [
-      `⚠️ Заказ #${order.id} отменен клиентом.`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-    ].join('\n')
-  );
+  clearFlow(ctx);
+  await ctx.reply('✅ Предложение опубликовано для соседей вашего дома.', getMainKeyboard(user));
+  await ctx.reply(listingCardText(listing, user, { showOwner: false }), {
+    ...getMainKeyboard(user),
+    ...getListingInlineKeyboard(listing, user),
+  });
 }
 
 function cancelActiveFlow(ctx, message) {
@@ -1396,6 +1137,166 @@ function createBot(botToken) {
     await notifyProviderOrderCancelled(bot, result.order);
   });
 
+  bot.action('listings:browse', async (ctx) => {
+    await ctx.answerCbQuery();
+    await showHouseListings(ctx);
+  });
+
+  bot.action('listings:create_service', async (ctx) => {
+    const user = getUserByTelegramId(ctx.from.id);
+    await ctx.answerCbQuery();
+    await startListingFlow(ctx, user, 'service');
+  });
+
+  bot.action('listings:create_rental', async (ctx) => {
+    const user = getUserByTelegramId(ctx.from.id);
+    await ctx.answerCbQuery();
+    await startListingFlow(ctx, user, 'rental');
+  });
+
+  bot.action('listings:my', async (ctx) => {
+    await ctx.answerCbQuery();
+    await showMyListings(ctx);
+  });
+
+  bot.action(/^listing_close:(.+)$/, async (ctx) => {
+    const listingId = ctx.match[1];
+    const user = getUserByTelegramId(ctx.from.id);
+
+    const result = withDb((db) => {
+      const listing = db.listings.find((item) => item.id === listingId);
+      if (!listing) {
+        return { error: 'Предложение не найдено.' };
+      }
+
+      if (!user || listing.ownerUserId !== user.id) {
+        return { error: 'Можно закрыть только свое предложение.' };
+      }
+
+      if (listing.status !== 'active') {
+        return { error: 'Предложение уже закрыто.' };
+      }
+
+      listing.status = 'closed';
+      listing.closedAt = new Date().toISOString();
+      return { listing };
+    });
+
+    if (result.error) {
+      await ctx.answerCbQuery(result.error);
+      return;
+    }
+
+    await ctx.answerCbQuery('Предложение закрыто.');
+    await ctx.reply('✅ Предложение закрыто и больше не видно соседям.', getMainKeyboard(user));
+  });
+
+  bot.action(/^listing_interest:(.+)$/, async (ctx) => {
+    const listingId = ctx.match[1];
+    const user = getUserByTelegramId(ctx.from.id);
+
+    if (!user) {
+      await ctx.answerCbQuery('🏡 Сначала зарегистрируйтесь.');
+      return;
+    }
+
+    const db = readDb();
+    const listing = db.listings.find((item) => item.id === listingId);
+    if (!listing) {
+      await ctx.answerCbQuery('Предложение не найдено.');
+      return;
+    }
+
+    if (listing.status !== 'active') {
+      await ctx.answerCbQuery('Предложение уже неактивно.');
+      return;
+    }
+
+    if (listing.houseId !== user.houseId) {
+      await ctx.answerCbQuery('Можно откликаться только на предложения своего дома.');
+      return;
+    }
+
+    if (listing.ownerUserId === user.id) {
+      await ctx.answerCbQuery('Это ваше предложение.');
+      return;
+    }
+
+    const owner = db.users.find((item) => item.id === listing.ownerUserId);
+    if (!owner) {
+      await ctx.answerCbQuery('Автор предложения не найден.');
+      return;
+    }
+
+    await ctx.answerCbQuery('Автор получил ваш контакт.');
+    await ctx.reply('✅ Автор предложения получил ваш контакт и сможет связаться с вами.', getMainKeyboard(user));
+
+    try {
+      await bot.telegram.sendMessage(owner.telegramId, listingInterestText(listing, user));
+    } catch (error) {
+      console.error(`Failed to notify listing owner ${owner.telegramId}:`, error.message);
+    }
+  });
+
+  bot.action(/^listing_create_order:(.+)$/, async (ctx) => {
+    const listingId = ctx.match[1];
+    const user = getUserByTelegramId(ctx.from.id);
+
+    const result = withDb((db) => {
+      const listing = db.listings.find((item) => item.id === listingId);
+      if (!listing) {
+        return { error: 'Предложение не найдено.' };
+      }
+
+      if (!user) {
+        return { error: '🏡 Сначала зарегистрируйтесь.' };
+      }
+
+      if (listing.status !== 'active') {
+        return { error: 'Предложение уже неактивно.' };
+      }
+
+      if (listing.houseId !== user.houseId) {
+        return { error: 'Можно создавать запросы только по предложениям своего дома.' };
+      }
+
+      if (listing.ownerUserId === user.id) {
+        return { error: 'Нельзя создать запрос по своему предложению.' };
+      }
+
+      const owner = db.users.find((item) => item.id === listing.ownerUserId);
+      if (!owner) {
+        return { error: 'Автор предложения не найден.' };
+      }
+
+      const order = buildOrderFromListing(listing, user, {
+        id: generateId('order'),
+        now: new Date().toISOString(),
+      });
+      db.orders.push(order);
+
+      return { listing, order, owner };
+    });
+
+    if (result.error) {
+      await ctx.answerCbQuery(result.error);
+      return;
+    }
+
+    await ctx.answerCbQuery('Запрос создан.');
+    await ctx.reply('✅ Запрос создан и сразу назначен автору предложения.', getMainKeyboard(user));
+    await showOrderDetails(ctx, result.order.id);
+
+    try {
+      await bot.telegram.sendMessage(
+        result.owner.telegramId,
+        listingOrderCreatedText(result.listing, result.order, user)
+      );
+    } catch (error) {
+      console.error(`Failed to notify listing owner ${result.owner.telegramId}:`, error.message);
+    }
+  });
+
   bot.hears(MENU.START_REGISTRATION, async (ctx) => {
     await startRegistration(ctx);
   });
@@ -1480,11 +1381,7 @@ function createBot(botToken) {
   });
 
   bot.hears(MENU.FUTURE_MODULES, async (ctx) => {
-    const user = getUserByTelegramId(ctx.from.id);
-    await ctx.reply(
-      '🚧 Этот раздел еще в разработке. Позже здесь появятся услуги соседей и аренда вещей внутри дома.',
-      getMainKeyboard(user || null)
-    );
+    await showListingsHub(ctx);
   });
 
   bot.on('contact', async (ctx) => {
@@ -1493,7 +1390,13 @@ function createBot(botToken) {
       return;
     }
 
-    flow.data.phone = ctx.message.contact.phone_number;
+    const phone = normalizePhone(ctx.message.contact.phone_number);
+    if (!isValidPhone(phone)) {
+      await ctx.reply('📱 Не получилось распознать телефон. Введите номер текстом, минимум 10 цифр.');
+      return;
+    }
+
+    flow.data.phone = phone;
     flow.step = REGISTRATION_STEPS.ROLE;
 
     await ctx.reply(
@@ -1508,7 +1411,7 @@ function createBot(botToken) {
       return;
     }
 
-  if (flow.type === 'trash_order' && flow.step === ORDER_STEPS.PHOTO_BEFORE) {
+    if (flow.type === 'trash_order' && flow.step === ORDER_STEPS.PHOTO_BEFORE) {
       const user = getUserByTelegramId(ctx.from.id);
       const photoBeforeFileId = getBestPhotoFileId(ctx);
       const order = withDb((db) => {
@@ -1577,7 +1480,10 @@ function createBot(botToken) {
         return;
       }
 
-      await ctx.reply(`📸 Фото после принято. Заказ #${result.order.id} отправлен клиенту на подтверждение.`, getMainKeyboard(user));
+      await ctx.reply(
+        `📸 Фото после принято. Заказ #${result.order.id} отправлен клиенту на подтверждение.`,
+        getMainKeyboard(user)
+      );
       const db = readDb();
       const client = db.users.find((item) => item.id === result.order.clientUserId);
       await ctx.reply(orderSummaryForProvider(result.order, client), getMainKeyboard(user));
@@ -1586,7 +1492,7 @@ function createBot(botToken) {
   });
 
   bot.on('text', async (ctx) => {
-        const flow = ctx.session.flow;
+    const flow = ctx.session.flow;
     if (!flow) {
       return;
     }
@@ -1600,6 +1506,11 @@ function createBot(botToken) {
 
     if (flow.type === 'registration') {
       if (flow.step === REGISTRATION_STEPS.NAME) {
+        if (!isValidName(text)) {
+          await ctx.reply('👤 Введите имя от 2 до 80 символов.');
+          return;
+        }
+
         flow.data.name = text;
         flow.step = REGISTRATION_STEPS.PHONE;
 
@@ -1614,7 +1525,13 @@ function createBot(botToken) {
       }
 
       if (flow.step === REGISTRATION_STEPS.PHONE) {
-        flow.data.phone = text;
+        const phone = normalizePhone(text);
+        if (!isValidPhone(phone)) {
+          await ctx.reply('📱 Введите корректный телефон: минимум 10 цифр, можно с плюсом.');
+          return;
+        }
+
+        flow.data.phone = phone;
         flow.step = REGISTRATION_STEPS.ROLE;
 
         await ctx.reply(
@@ -1655,6 +1572,11 @@ function createBot(botToken) {
       }
 
       if (flow.step === REGISTRATION_STEPS.ENTRANCE) {
+        if (!isValidShortAddressPart(text)) {
+          await ctx.reply('🚪 Введите номер подъезда от 1 до 20 символов.');
+          return;
+        }
+
         flow.data.entrance = text;
         flow.step = REGISTRATION_STEPS.FLOOR;
         await ctx.reply('🛗 Введите этаж.', getCancelKeyboard());
@@ -1662,6 +1584,11 @@ function createBot(botToken) {
       }
 
       if (flow.step === REGISTRATION_STEPS.FLOOR) {
+        if (!isValidFloor(text)) {
+          await ctx.reply('🛗 Введите этаж числом от -5 до 100.');
+          return;
+        }
+
         flow.data.floor = text;
         flow.step = REGISTRATION_STEPS.APARTMENT;
         await ctx.reply('🔑 Введите номер квартиры.', getCancelKeyboard());
@@ -1669,6 +1596,11 @@ function createBot(botToken) {
       }
 
       if (flow.step === REGISTRATION_STEPS.APARTMENT) {
+        if (!isValidShortAddressPart(text)) {
+          await ctx.reply('🔑 Введите номер квартиры от 1 до 20 символов.');
+          return;
+        }
+
         const tgUser = getTelegramUser(ctx);
         const createdUser = withDb((db) => {
           const existingUser = db.users.find((item) => item.telegramId === String(tgUser.id));
@@ -1705,6 +1637,49 @@ function createBot(botToken) {
         clearFlow(ctx);
         await showStart(ctx, `🎉 Регистрация завершена для ${createdUser.name}.`);
         await ctx.reply('✨ Профиль сохранен. Можно создать заказ или посмотреть свои заказы.', getMainKeyboard(createdUser));
+        return;
+      }
+    }
+
+    if (flow.type === 'listing') {
+      const user = getUserByTelegramId(ctx.from.id);
+      if (!user) {
+        await cancelActiveFlow(ctx, '🏡 Сначала зарегистрируйтесь.');
+        return;
+      }
+
+      if (flow.step === LISTING_STEPS.TITLE) {
+        if (text.length < 3 || text.length > 80) {
+          await ctx.reply('🏷 Введите название от 3 до 80 символов.');
+          return;
+        }
+
+        flow.data.title = text;
+        flow.step = LISTING_STEPS.DESCRIPTION;
+        await ctx.reply('💬 Опишите предложение: что именно делаете или что сдаете.', getCancelKeyboard());
+        return;
+      }
+
+      if (flow.step === LISTING_STEPS.DESCRIPTION) {
+        if (text.length < 10 || text.length > 500) {
+          await ctx.reply('💬 Введите описание от 10 до 500 символов.');
+          return;
+        }
+
+        flow.data.description = text;
+        flow.step = LISTING_STEPS.TERMS;
+        await ctx.reply('💰 Укажите цену или условия. Например: 500 ₽, шоколадка, договоримся.', getCancelKeyboard());
+        return;
+      }
+
+      if (flow.step === LISTING_STEPS.TERMS) {
+        if (text.length < 2 || text.length > 120) {
+          await ctx.reply('💰 Введите условия от 2 до 120 символов.');
+          return;
+        }
+
+        flow.data.terms = text;
+        await createListingFromFlow(ctx, user, flow);
         return;
       }
     }

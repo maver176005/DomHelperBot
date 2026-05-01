@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "check": "node --check src/index.js"
+    "check": "node --check src/index.js && node --check src/storage/json-store.js && node --check src/config/seed-data.js && node --check src/presentation/telegram-text.js && node --check src/presentation/telegram-keyboards.js && node --check src/domain/registration-validation.js && node --check src/domain/listing-helpers.js && node --check src/notifications/telegram-notifications.js",
+    "test": "node --test"
   },
   "private": true,
   "dependencies": {
