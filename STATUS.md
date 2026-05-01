@@ -45,6 +45,11 @@
 - Telegram-уведомления вынесены в `src/notifications/telegram-notifications.js`
 - валидация регистрации вынесена в `src/domain/registration-validation.js`
 - добавлены первые автоматические тесты на `order-helpers`, `registration-validation`, `telegram-text`, `telegram-keyboards`, `telegram-notifications` и `json-store`
+- добавлен GitHub Actions CI для `npm run check` и `npm test`
+- добавлен Docker build job в GitHub Actions
+- добавлен Railway config-as-code для Dockerfile deploy и запуска через `npm start`
+- добавлен production `Dockerfile` и `.dockerignore`
+- добавлена инструкция полного цикла deploy в `docs/DEPLOYMENT.md`
 - зафиксирован go-to-market через объявление в подъезде и QR-код
 
 ## Бизнес-правила, которые уже соблюдаются
@@ -60,6 +65,7 @@
 ## Осознанные MVP-упрощения
 
 - локальное JSON-хранилище вместо БД
+- на Railway локальный `data/db.json` не является полноценной постоянной БД
 - дома задаются локально
 - нет подтверждения реального проживания в доме
 - нет house admin / super admin интерфейса

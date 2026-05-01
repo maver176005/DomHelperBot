@@ -11,6 +11,7 @@
 - [STATUS.md](/Users/mac/WebstormProjects/DomHelperBot/STATUS.md) — что уже реализовано и какие есть упрощения
 - [docs/DECISIONS.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DECISIONS.md) — ключевые инженерные решения
 - [docs/GTM.md](/Users/mac/WebstormProjects/DomHelperBot/docs/GTM.md) — идея запуска через объявление и QR в подъезде
+- [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md) — GitHub Actions и Railway deploy
 
 Что уже есть:
 
@@ -103,6 +104,10 @@ npm start
 npm run check
 npm test
 ```
+
+## Деплой
+
+Для GitHub Actions + Railway autodeploy см. [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md).
 
 ## Как проверить MVP
 

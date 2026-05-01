@@ -123,6 +123,18 @@
 - `test/`
   Первые unit-тесты чистых модулей на встроенном `node:test`.
 
+- `.github/workflows/ci.yml`
+  GitHub Actions workflow для `npm run check`, `npm test` и Docker build.
+
+- `railway.json`
+  Railway config-as-code для Dockerfile deploy и запуска сервиса через `npm start`.
+
+- `Dockerfile`
+  Production image для Railway.
+
+- `.dockerignore`
+  Исключения для Docker build context.
+
 ## Логические блоки в `src/index.js`
 
 Порядок в файле сейчас такой:

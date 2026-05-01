@@ -25,6 +25,12 @@
 7. [GTM.md](/Users/mac/WebstormProjects/DomHelperBot/docs/GTM.md)
    Черновик запуска через объявление и QR в подъезде.
 
+8. [LESSONS.md](/Users/mac/WebstormProjects/DomHelperBot/docs/LESSONS.md)
+   Журнал самообучения: ошибка, урок, новое правило после исправлений.
+
+9. [DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md)
+   Полный цикл GitHub Actions и Railway autodeploy.
+
 ## Практическая навигация
 
 - Хочешь понять продукт:
@@ -44,6 +50,12 @@
 
 - Хочешь продумать запуск по домам:
   открой `docs/GTM.md`
+
+- Хочешь понять, какие ошибки уже превращены в правила:
+  открой `docs/LESSONS.md`
+
+- Хочешь настроить деплой:
+  открой `docs/DEPLOYMENT.md`
 
 ## Почему source-of-truth файлы не переносились в `docs/`
 
