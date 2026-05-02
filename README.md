@@ -113,6 +113,10 @@ npm test
 
 Текущий Railway deploy работает: бот отвечает без локального `npm start`.
 
+## Лендинг
+
+Статический лендинг лежит в [landing/index.html](/Users/mac/WebstormProjects/DomHelperBot/landing/index.html). Его можно открыть напрямую в браузере.
+
 ## Как проверить MVP
 
 1. Откройте бота и вызовите `/start`.

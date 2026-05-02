@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DomHelperBot - дом, где соседи помогают</title>
+    <meta
+      name="description"
+      content="Лендинг DomHelperBot: Telegram-бот для заявок, услуг и аренды вещей внутри одного дома."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@500;700&family=Fira+Sans+Condensed:wght@500;700;800&family=PT+Serif:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <nav class="dock" aria-label="Навигация по лендингу">
+      <a href="#cover">Главная</a>
+      <a href="#requests">Сценарии</a>
+      <a href="#system">Логика</a>
+      <a class="dock-tg" href="https://t.me/your_bot_username" aria-label="Открыть Telegram-бота">TG</a>
+    </nav>
+
+    <main class="story">
+      <section id="cover" class="scene cover">
+        <div class="cover-image" aria-hidden="true"></div>
+        <div class="cover-mark">DomHelperBot</div>
+        <div class="cover-title">
+          <p>Telegram-бот для одного дома</p>
+          <h1>Помощь соседей без шума общего чата</h1>
+        </div>
+        <div class="cover-note">
+          <span>01</span>
+          <p>
+            Житель создает заявку, сосед берет задачу, бот сохраняет порядок:
+            срочность, оплату, статус и подтверждение.
+          </p>
+        </div>
+      </section>
+
+      <section id="requests" class="scene requests">
+        <div class="scene-head">
+          <span>02</span>
+          <h2>Бытовые просьбы становятся понятными карточками</h2>
+        </div>
+        <div class="request-board" aria-label="Сценарии бота">
+          <article class="request-card trash">
+            <div class="card-art trash-art" aria-hidden="true">
+              <svg viewBox="0 0 180 112" role="img">
+                <path class="icon-fill soft" d="M34 37h51l8 56H28l6-56Z" />
+                <path class="icon-line lift-a" d="M34 37h51l8 56H28l6-56ZM48 37c0-14 22-14 22 0" />
+                <path class="icon-fill pale" d="M100 48h38l7 45H95l5-45Z" />
+                <path class="icon-line lift-b" d="M100 48h38l7 45H95l5-45ZM111 48c0-11 18-11 18 0" />
+                <path class="icon-line pop-a" d="M142 25l9-12 9 12 13 7-13 7-9 13-9-13-13-7 13-7Z" />
+              </svg>
+            </div>
+            <div>
+              <p>Вынести мусор</p>
+              <strong>Фото до, цена, срочность, фото после.</strong>
+            </div>
+          </article>
+          <article class="request-card shop">
+            <div class="card-art shop-art" aria-hidden="true">
+              <svg viewBox="0 0 180 112" role="img">
+                <path class="icon-line pulse-a" d="M52 18v42M31 39h42" />
+                <path class="icon-fill pale float-a" d="M94 29h44a15 15 0 0 1 0 30H94a15 15 0 0 1 0-30Z" />
+                <path class="icon-line float-a" d="M94 29h44a15 15 0 0 1 0 30H94a15 15 0 0 1 0-30Zm22 0v30" />
+                <path class="icon-fill soft float-b" d="M45 69h72v26H45z" />
+                <path class="icon-line float-b" d="M45 69h72v26H45zM56 69l8-14h34l8 14" />
+              </svg>
+            </div>
+            <div>
+              <p>Аптека и продукты</p>
+              <strong>Короткая просьба соседям, которые готовы помочь сегодня.</strong>
+            </div>
+          </article>
+          <article class="request-card service">
+            <div class="card-art service-art" aria-hidden="true">
+              <svg viewBox="0 0 180 112" role="img">
+                <path class="icon-line tap-a" d="M44 79l55-55M93 18l22 22M84 27l22 22" />
+                <path class="icon-line tap-b" d="M127 26l-18 18 27 27 18-18M144 35l-26 26" />
+                <path class="icon-line pulse-a" d="M54 91h72M66 91l8-10M100 91l8-10" />
+                <circle class="icon-fill soft pop-a" cx="139" cy="83" r="11" />
+                <circle class="icon-line pop-a" cx="139" cy="83" r="11" />
+              </svg>
+            </div>
+            <div>
+              <p>Услуги</p>
+              <strong>Сборка, мелкий ремонт, помощь по дому и навыки жильцов.</strong>
+            </div>
+          </article>
+          <article class="request-card rent">
+            <div class="card-art rent-art" aria-hidden="true">
+              <svg viewBox="0 0 180 112" role="img">
+                <path class="icon-fill soft buzz-a" d="M31 34h65l12 13-12 13H31z" />
+                <path class="icon-line buzz-a" d="M31 34h65l12 13-12 13H31zM48 60v29h27V60M108 47h25" />
+                <path class="icon-line float-a" d="M139 18v75M164 18v75M139 34h25M139 52h25M139 70h25" />
+                <path class="icon-line pulse-a" d="M83 86c17 20 45 18 58-1" />
+              </svg>
+            </div>
+            <div>
+              <p>Аренда вещей</p>
+              <strong>Инструмент и бытовые вещи доступны внутри своего дома.</strong>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="system" class="scene system">
+        <div class="system-copy">
+          <span>03</span>
+          <h2>Не новый чат, а правила маршрутизации</h2>
+          <p>
+            DomHelperBot показывает заявки только жильцам нужного дома, скрывает квартиру
+            до назначения исполнителя и не дает двум соседям взять один заказ.
+          </p>
+          <div class="security-note">
+            <span>Безопасность</span>
+            <strong>Доступ только по дому. Верификацию жильцов можно добавить следующим этапом.</strong>
+          </div>
+        </div>
+        <div class="floor-map" aria-label="Правила работы внутри дома">
+          <div class="floor-row">
+            <span>Дом</span>
+            <p>Все заявки фильтруются по `houseId`.</p>
+          </div>
+          <div class="floor-row">
+            <span>Адрес</span>
+            <p>Квартира раскрывается только назначенному исполнителю.</p>
+          </div>
+          <div class="floor-row">
+            <span>Статус</span>
+            <p>После взятия заказ уходит из общего списка.</p>
+          </div>
+          <div class="floor-row">
+            <span>Итог</span>
+            <p>Клиент подтверждает выполнение, история остается в заказах.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="poster" class="scene poster">
+        <div class="poster-sheet">
+          <p class="poster-label">Повесить в подъезде</p>
+          <h2>Соседи помогают соседям</h2>
+          <div class="fake-qr" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <p class="poster-url">t.me/your_bot_username</p>
+        </div>
+        <div class="poster-copy">
+          <span>04</span>
+          <h2>Первый запуск начинается с QR-кода</h2>
+          <p>
+            Житель открывает бота, регистрируется, выбирает дом и роль. После этого
+            можно создавать заявки, помогать соседям, публиковать услуги и сдавать вещи.
+          </p>
+          <a class="launch-link" href="https://t.me/your_bot_username">Открыть Telegram-бота</a>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const scenes = Array.from(document.querySelectorAll(".scene"));
+        const dock = document.querySelector(".dock");
+        if (!scenes.length || !dock) return;
+
+        const update = () => {
+          let activeId = scenes[0].id;
+          scenes.forEach((scene) => {
+            const rect = scene.getBoundingClientRect();
+            if (rect.top <= window.innerHeight * 0.42) activeId = scene.id;
+          });
+
+          dock.querySelectorAll("a").forEach((link) => {
+            link.toggleAttribute("aria-current", link.getAttribute("href") === `#${activeId}`);
+          });
+        };
+
+        update();
+        window.addEventListener("scroll", () => window.requestAnimationFrame(update), { passive: true });
+        window.addEventListener("resize", update);
+      })();
+    </script>
+  </body>
+</html>

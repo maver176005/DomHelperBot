@@ -37,6 +37,9 @@
 11. [DATABASE_PLAN.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DATABASE_PLAN.md)
     План миграции с `data/db.json` на Railway Postgres.
 
+12. [landing/index.html](/Users/mac/WebstormProjects/DomHelperBot/landing/index.html)
+    Статический лендинг, объясняющий пользу бота для жильцов дома.
+
 ## Практическая навигация
 
 - Хочешь понять продукт:
@@ -68,6 +71,9 @@
 
 - Подключаешь постоянную БД:
   открой `docs/DATABASE_PLAN.md`
+
+- Нужно показать продукт жильцу или старшему по дому:
+  открой `landing/index.html`
 
 ## Почему source-of-truth файлы не переносились в `docs/`
 
