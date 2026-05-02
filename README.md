@@ -12,6 +12,7 @@
 - [docs/DECISIONS.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DECISIONS.md) — ключевые инженерные решения
 - [docs/GTM.md](/Users/mac/WebstormProjects/DomHelperBot/docs/GTM.md) — идея запуска через объявление и QR в подъезде
 - [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md) — GitHub Actions и Railway deploy
+- [docs/NEXT_SESSION.md](/Users/mac/WebstormProjects/DomHelperBot/docs/NEXT_SESSION.md) — с чего начать следующую сессию
 
 Что уже есть:
 
@@ -109,6 +110,8 @@ npm test
 
 Для GitHub Actions + Railway autodeploy см. [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md).
 
+Текущий Railway deploy работает: бот отвечает без локального `npm start`.
+
 ## Как проверить MVP
 
 1. Откройте бота и вызовите `/start`.
@@ -139,4 +142,5 @@ npm test
 
 ## Позже
 
+- Первым следующим техническим шагом подключить постоянную БД вместо `data/db.json`.
 - Нужна web-версия продукта с красивым UI для более удобного пользовательского сценария.

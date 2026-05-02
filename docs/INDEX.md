@@ -31,6 +31,9 @@
 9. [DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md)
    Полный цикл GitHub Actions и Railway autodeploy.
 
+10. [NEXT_SESSION.md](/Users/mac/WebstormProjects/DomHelperBot/docs/NEXT_SESSION.md)
+    Первый шаг следующей сессии: подключить постоянную БД.
+
 ## Практическая навигация
 
 - Хочешь понять продукт:
@@ -56,6 +59,9 @@
 
 - Хочешь настроить деплой:
   открой `docs/DEPLOYMENT.md`
+
+- Начинаешь новую рабочую сессию:
+  открой `docs/NEXT_SESSION.md`
 
 ## Почему source-of-truth файлы не переносились в `docs/`
 
