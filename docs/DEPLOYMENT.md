@@ -1,6 +1,6 @@
 # DEPLOYMENT.md
 
-Инструкция для полного цикла GitHub -> CI -> Railway deploy.
+Инструкция для полного цикла GitHub -> CI -> Railway deploy и GitHub Pages deploy.
 
 ## Цель
 
@@ -12,7 +12,7 @@ git commit -m "..."
 git push
 ```
 
-Дальше GitHub Actions запускает проверки, а Railway автоматически деплоит обновление из подключенной ветки.
+Дальше GitHub Actions запускает проверки, Railway автоматически деплоит бота из подключенной ветки, а GitHub Pages публикует статический лендинг из `landing/`.
 
 Текущий статус: Railway deploy настроен и бот отвечает без локального запуска.
 
@@ -25,6 +25,13 @@ git push
   - `npm run check`
   - `npm test`
   - `docker build -t dom-helper-bot:ci .`
+
+- `.github/workflows/pages.yml`
+  Запускается на `push` в `main`, если менялись `landing/**` или сам workflow.
+  Выполняет:
+  - `actions/configure-pages`
+  - `actions/upload-pages-artifact` для папки `landing`
+  - `actions/deploy-pages`
 
 - `railway.json`
   Railway config-as-code:
@@ -52,6 +59,18 @@ git push
    - `main`, если ветка будет переименована.
 5. Включить GitHub autodeploy для выбранной ветки.
 6. Включить `Wait for CI`, чтобы Railway деплоил только после успешного GitHub Actions workflow.
+
+## Настройка GitHub Pages
+
+1. Открыть репозиторий на GitHub.
+2. Перейти в `Settings -> Pages`.
+3. В `Build and deployment` выбрать source `GitHub Actions`.
+4. После следующего push в `main` открыть workflow `Pages`.
+5. URL лендинга будет в job environment `github-pages`, обычно:
+
+```text
+https://maver176005.github.io/DomHelperBot/
+```
 
 ## Переменные окружения Railway
 
@@ -83,8 +102,9 @@ docker build -t dom-helper-bot:ci .
 После push:
 
 1. Открыть GitHub Actions и убедиться, что workflow `CI` зеленый.
-2. Открыть Railway Deployments и убедиться, что новый deploy прошел после CI.
-3. В Railway Logs должно быть:
+2. Если менялся лендинг, убедиться, что workflow `Pages` зеленый.
+3. Открыть Railway Deployments и убедиться, что новый deploy прошел после CI.
+4. В Railway Logs должно быть:
 
 ```text
 DomHelperBot started
@@ -106,3 +126,12 @@ DomHelperBot started
 - Ветка deploy trigger совпадает с веткой, куда был push.
 - Если включен `Wait for CI`, workflow `CI` должен успешно завершиться.
 - В service variables задан `BOT_TOKEN`.
+
+## Если лендинг не публикуется
+
+Проверить:
+
+- В `Settings -> Pages` выбран source `GitHub Actions`.
+- Workflow `Pages` запускается из ветки `main`.
+- В workflow есть permissions `pages: write` и `id-token: write`.
+- В репозитории есть папка `landing/` с `index.html`.
