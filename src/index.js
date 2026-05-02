@@ -137,18 +137,18 @@ function getTelegramUser(ctx) {
   return ctx.from || {};
 }
 
-function getUserByTelegramId(telegramId) {
-  const db = readDb();
+async function getUserByTelegramId(telegramId) {
+  const db = await readDb();
   return db.users.find((user) => user.telegramId === String(telegramId));
 }
 
-function getHouse(houseId) {
-  const db = readDb();
+async function getHouse(houseId) {
+  const db = await readDb();
   return db.houses.find((house) => house.id === houseId);
 }
 
-function getOrder(orderId) {
-  const db = readDb();
+async function getOrder(orderId) {
+  const db = await readDb();
   return db.orders.find((order) => order.id === orderId);
 }
 
@@ -161,13 +161,13 @@ function isFinishedOrderStatus(status) {
 }
 
 async function showOrderDetails(ctx, orderId) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, 'Сначала зарегистрируйтесь.');
     return;
   }
 
-  const db = readDb();
+  const db = await readDb();
   const order = db.orders.find((item) => item.id === orderId);
   if (!order) {
     await ctx.reply('😕 Заказ не найден.', getMainKeyboard(user));
@@ -189,7 +189,7 @@ async function showOrderDetails(ctx, orderId) {
 
 async function showStart(ctx, message) {
   const tgUser = getTelegramUser(ctx);
-  const user = getUserByTelegramId(tgUser.id);
+  const user = await getUserByTelegramId(tgUser.id);
 
   if (!user) {
     await ctx.reply(
@@ -199,7 +199,7 @@ async function showStart(ctx, message) {
     return;
   }
 
-  const house = getHouse(user.houseId);
+  const house = await getHouse(user.houseId);
   await ctx.reply(
     message || [
       `👋 Привет, ${user.name}!`,
@@ -212,13 +212,13 @@ async function showStart(ctx, message) {
 }
 
 async function showUserOrders(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, 'Сначала зарегистрируйтесь.');
     return;
   }
 
-  const db = readDb();
+  const db = await readDb();
   const orders = db.orders
     .filter((order) => order.clientUserId === user.id || order.providerUserId === user.id)
     .filter((order) => !isFinishedOrderStatus(order.status))
@@ -235,13 +235,13 @@ async function showUserOrders(ctx) {
 }
 
 async function showCompletedOrders(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, 'Сначала зарегистрируйтесь.');
     return;
   }
 
-  const db = readDb();
+  const db = await readDb();
   const orders = db.orders
     .filter((order) => order.clientUserId === user.id || order.providerUserId === user.id)
     .filter((order) => isFinishedOrderStatus(order.status))
@@ -284,13 +284,13 @@ async function showOrdersByRoleSections(ctx, db, user, orders) {
 }
 
 async function showMyHouse(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, 'Сначала зарегистрируйтесь.');
     return;
   }
 
-  const house = getHouse(user.houseId);
+  const house = await getHouse(user.houseId);
   await ctx.reply(
     profileText(user, house),
     {
@@ -301,7 +301,7 @@ async function showMyHouse(ctx) {
 }
 
 async function showAvailabilitySettings(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
     return;
@@ -327,13 +327,13 @@ async function showAvailabilitySettings(ctx) {
 }
 
 async function showPopularServices(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
     return;
   }
 
-  const db = readDb();
+  const db = await readDb();
   const services = getPopularServices(db, user.houseId);
   const lines = [
     '🔥 Самые популярные услуги в вашем доме',
@@ -427,13 +427,13 @@ function startGeneralHelpOrder(ctx, user, serviceKey) {
 }
 
 async function showRequestTypeSelector(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
     return;
   }
 
-  const db = readDb();
+  const db = await readDb();
   const stats = getProviderAvailabilityStats(db, user.houseId);
 
   await ctx.reply(
@@ -456,7 +456,7 @@ async function showRequestTypeSelector(ctx) {
 }
 
 async function warnAboutNoReadyProviders(ctx, user, flow) {
-  const db = readDb();
+  const db = await readDb();
   const stats = getProviderAvailabilityStats(db, user.houseId);
 
   if (flow.data.urgencyKey !== 'within_hour' || stats.readyNow > 0) {
@@ -543,7 +543,7 @@ function startRepeatGeneralHelpOrder(ctx, user, sourceOrder) {
 }
 
 async function createGeneralOrderFromFlow(ctx, user, flow, bot) {
-  const order = withDb((db) => {
+  const order = await withDb((db) => {
     const newOrder = {
       id: generateId('order'),
       type: 'service',
@@ -582,7 +582,7 @@ async function createGeneralOrderFromFlow(ctx, user, flow, bot) {
 }
 
 async function startProfileEdit(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, 'Сначала зарегистрируйтесь.');
     return;
@@ -606,13 +606,13 @@ function getBestPhotoFileId(ctx) {
 }
 
 async function showListingsHub(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
     return;
   }
 
-  const db = readDb();
+  const db = await readDb();
   const activeCount = db.listings.filter(
     (listing) => listing.houseId === user.houseId && listing.status === 'active'
   ).length;
@@ -632,13 +632,13 @@ async function showListingsHub(ctx) {
 }
 
 async function showHouseListings(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
     return;
   }
 
-  const db = readDb();
+  const db = await readDb();
   const listings = db.listings
     .filter((listing) => listing.houseId === user.houseId && listing.status === 'active')
     .slice(-10)
@@ -664,13 +664,13 @@ async function showHouseListings(ctx) {
 }
 
 async function showMyListings(ctx) {
-  const user = getUserByTelegramId(ctx.from.id);
+  const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
     await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
     return;
   }
 
-  const db = readDb();
+  const db = await readDb();
   const listings = db.listings
     .filter((listing) => listing.ownerUserId === user.id)
     .slice(-10)
@@ -716,7 +716,7 @@ function startListingFlow(ctx, user, type) {
 }
 
 async function createListingFromFlow(ctx, user, flow) {
-  const listing = withDb((db) => {
+  const listing = await withDb((db) => {
     const newListing = {
       id: generateId('listing'),
       type: flow.data.listingType,
@@ -741,8 +741,8 @@ async function createListingFromFlow(ctx, user, flow) {
   });
 }
 
-function cancelActiveFlow(ctx, message) {
-  const user = getUserByTelegramId(ctx.from.id);
+async function cancelActiveFlow(ctx, message) {
+  const user = await getUserByTelegramId(ctx.from.id);
   clearFlow(ctx);
   return ctx.reply(message || '🫡 Текущее действие отменено.', getMainKeyboard(user || null));
 }
@@ -789,7 +789,7 @@ function createBot(botToken) {
   });
 
   bot.command('help', async (ctx) => {
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
     await ctx.reply(
       [
         '🧭 Основные команды:',
@@ -816,7 +816,7 @@ function createBot(botToken) {
   bot.action(/^switch_role:(client|provider)$/, async (ctx) => {
     const nextRole = ctx.match[1];
 
-    const result = withDb((db) => {
+    const result = await withDb((db) => {
       const currentUser = db.users.find((item) => item.telegramId === String(ctx.from.id));
       if (!currentUser) {
         return { error: '🏡 Сначала зарегистрируйтесь.' };
@@ -853,7 +853,7 @@ function createBot(botToken) {
   bot.action(/^availability:(ready_now|later|offline)$/, async (ctx) => {
     const nextStatus = ctx.match[1];
 
-    const result = withDb((db) => {
+    const result = await withDb((db) => {
       const currentUser = db.users.find((item) => item.telegramId === String(ctx.from.id));
       if (!currentUser) {
         return { error: '🏡 Сначала зарегистрируйтесь.' };
@@ -883,7 +883,7 @@ function createBot(botToken) {
 
   bot.action(/^take_order:(.+)$/, async (ctx) => {
     const orderId = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
 
     if (!user) {
       await ctx.answerCbQuery('🏡 Сначала зарегистрируйтесь.');
@@ -895,7 +895,7 @@ function createBot(botToken) {
       return;
     }
 
-    const result = withDb((db) => {
+    const result = await withDb((db) => {
       const order = db.orders.find((item) => item.id === orderId);
       if (!order) {
         return { error: 'Заказ не найден.' };
@@ -920,7 +920,7 @@ function createBot(botToken) {
       return;
     }
 
-    const db = readDb();
+    const db = await readDb();
     const order = db.orders.find((item) => item.id === orderId);
     const client = db.users.find((item) => item.id === order.clientUserId);
     const house = db.houses.find((item) => item.id === order.houseId);
@@ -953,7 +953,7 @@ function createBot(botToken) {
 
   bot.action(/^request_type:(.+)$/, async (ctx) => {
     const serviceKey = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
     const service = getServiceTemplate(serviceKey);
 
     if (!user || !service) {
@@ -973,7 +973,7 @@ function createBot(botToken) {
 
   bot.action(/^popular_service:(.+)$/, async (ctx) => {
     const serviceKey = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
     const service = getServiceTemplate(serviceKey);
 
     if (!user || !service) {
@@ -993,8 +993,8 @@ function createBot(botToken) {
 
   bot.action(/^repeat_order:(.+)$/, async (ctx) => {
     const orderId = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
-    const order = getOrder(orderId);
+    const user = await getUserByTelegramId(ctx.from.id);
+    const order = await getOrder(orderId);
 
     if (!user || !order || order.clientUserId !== user.id) {
       await ctx.answerCbQuery('🔒 Недоступно.');
@@ -1017,8 +1017,8 @@ function createBot(botToken) {
 
   bot.action(/^complete_order:(.+)$/, async (ctx) => {
     const orderId = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
-    const order = getOrder(orderId);
+    const user = await getUserByTelegramId(ctx.from.id);
+    const order = await getOrder(orderId);
 
     if (!user || !order || order.providerUserId !== user.id) {
       await ctx.answerCbQuery('🔒 Недоступно.');
@@ -1026,7 +1026,7 @@ function createBot(botToken) {
     }
 
     if (order.type === 'service') {
-      const result = withDb((db) => {
+      const result = await withDb((db) => {
         const currentOrder = db.orders.find((item) => item.id === orderId);
         if (!currentOrder) {
           return { error: 'Заказ не найден.' };
@@ -1067,9 +1067,9 @@ function createBot(botToken) {
 
   bot.action(/^confirm_order:(.+)$/, async (ctx) => {
     const orderId = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
 
-    const result = withDb((db) => {
+    const result = await withDb((db) => {
       const order = db.orders.find((item) => item.id === orderId);
       if (!order) {
         return { error: 'Заказ не найден.' };
@@ -1100,9 +1100,9 @@ function createBot(botToken) {
 
   bot.action(/^cancel_order:(.+)$/, async (ctx) => {
     const orderId = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
 
-    const result = withDb((db) => {
+    const result = await withDb((db) => {
       const order = db.orders.find((item) => item.id === orderId);
       if (!order) {
         return { error: 'Заказ не найден.' };
@@ -1143,13 +1143,13 @@ function createBot(botToken) {
   });
 
   bot.action('listings:create_service', async (ctx) => {
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
     await ctx.answerCbQuery();
     await startListingFlow(ctx, user, 'service');
   });
 
   bot.action('listings:create_rental', async (ctx) => {
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
     await ctx.answerCbQuery();
     await startListingFlow(ctx, user, 'rental');
   });
@@ -1161,9 +1161,9 @@ function createBot(botToken) {
 
   bot.action(/^listing_close:(.+)$/, async (ctx) => {
     const listingId = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
 
-    const result = withDb((db) => {
+    const result = await withDb((db) => {
       const listing = db.listings.find((item) => item.id === listingId);
       if (!listing) {
         return { error: 'Предложение не найдено.' };
@@ -1193,14 +1193,14 @@ function createBot(botToken) {
 
   bot.action(/^listing_interest:(.+)$/, async (ctx) => {
     const listingId = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
 
     if (!user) {
       await ctx.answerCbQuery('🏡 Сначала зарегистрируйтесь.');
       return;
     }
 
-    const db = readDb();
+    const db = await readDb();
     const listing = db.listings.find((item) => item.id === listingId);
     if (!listing) {
       await ctx.answerCbQuery('Предложение не найдено.');
@@ -1240,9 +1240,9 @@ function createBot(botToken) {
 
   bot.action(/^listing_create_order:(.+)$/, async (ctx) => {
     const listingId = ctx.match[1];
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
 
-    const result = withDb((db) => {
+    const result = await withDb((db) => {
       const listing = db.listings.find((item) => item.id === listingId);
       if (!listing) {
         return { error: 'Предложение не найдено.' };
@@ -1334,13 +1334,13 @@ function createBot(botToken) {
   });
 
   bot.hears(MENU.HOUSE_REQUESTS, async (ctx) => {
-    const user = getUserByTelegramId(ctx.from.id);
+    const user = await getUserByTelegramId(ctx.from.id);
     if (!user) {
       await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
       return;
     }
 
-    const db = readDb();
+    const db = await readDb();
     const house = db.houses.find((item) => item.id === user.houseId);
     const orders = db.orders
       .filter((order) => order.houseId === user.houseId && order.status === 'created')
@@ -1412,9 +1412,9 @@ function createBot(botToken) {
     }
 
     if (flow.type === 'trash_order' && flow.step === ORDER_STEPS.PHOTO_BEFORE) {
-      const user = getUserByTelegramId(ctx.from.id);
+      const user = await getUserByTelegramId(ctx.from.id);
       const photoBeforeFileId = getBestPhotoFileId(ctx);
-      const order = withDb((db) => {
+      const order = await withDb((db) => {
         const newOrder = {
           id: generateId('order'),
           type: 'trash_removal',
@@ -1455,9 +1455,9 @@ function createBot(botToken) {
     }
 
     if (flow.type === 'trash_order' && flow.step === ORDER_STEPS.PHOTO_AFTER) {
-      const user = getUserByTelegramId(ctx.from.id);
+      const user = await getUserByTelegramId(ctx.from.id);
       const photoAfterFileId = getBestPhotoFileId(ctx);
-      const result = withDb((db) => {
+      const result = await withDb((db) => {
         const order = db.orders.find((item) => item.id === flow.data.orderId);
         if (!order) {
           return { error: 'Заказ не найден.' };
@@ -1484,7 +1484,7 @@ function createBot(botToken) {
         `📸 Фото после принято. Заказ #${result.order.id} отправлен клиенту на подтверждение.`,
         getMainKeyboard(user)
       );
-      const db = readDb();
+      const db = await readDb();
       const client = db.users.find((item) => item.id === result.order.clientUserId);
       await ctx.reply(orderSummaryForProvider(result.order, client), getMainKeyboard(user));
       await notifyClientOrderCompleted(bot, result.order);
@@ -1550,7 +1550,7 @@ function createBot(botToken) {
         flow.data.role = text === 'Исполнитель' ? 'provider' : 'client';
         flow.step = REGISTRATION_STEPS.HOUSE;
 
-        const db = readDb();
+        const db = await readDb();
         const houseButtons = db.houses.filter((house) => house.isActive).map((house) => [houseLabel(house)]);
         houseButtons.push([CANCEL_TEXT]);
         await ctx.reply('🏠 Выберите дом.', Markup.keyboard(houseButtons).resize().oneTime());
@@ -1558,7 +1558,7 @@ function createBot(botToken) {
       }
 
       if (flow.step === REGISTRATION_STEPS.HOUSE) {
-        const db = readDb();
+        const db = await readDb();
         const house = db.houses.find((item) => houseLabel(item) === text);
         if (!house) {
           await ctx.reply('🏠 Выберите дом из списка.');
@@ -1602,7 +1602,7 @@ function createBot(botToken) {
         }
 
         const tgUser = getTelegramUser(ctx);
-        const createdUser = withDb((db) => {
+        const createdUser = await withDb((db) => {
           const existingUser = db.users.find((item) => item.telegramId === String(tgUser.id));
           const userPayload = {
             id: existingUser ? existingUser.id : generateId('user'),
@@ -1642,7 +1642,7 @@ function createBot(botToken) {
     }
 
     if (flow.type === 'listing') {
-      const user = getUserByTelegramId(ctx.from.id);
+      const user = await getUserByTelegramId(ctx.from.id);
       if (!user) {
         await cancelActiveFlow(ctx, '🏡 Сначала зарегистрируйтесь.');
         return;
@@ -1740,7 +1740,7 @@ function createBot(botToken) {
         flow.data.paymentMethod = text;
         flow.data.nextAction = 'trash_photo';
 
-        if (await warnAboutNoReadyProviders(ctx, getUserByTelegramId(ctx.from.id), flow)) {
+        if (await warnAboutNoReadyProviders(ctx, await getUserByTelegramId(ctx.from.id), flow)) {
           return;
         }
 
@@ -1789,7 +1789,7 @@ function createBot(botToken) {
       }
 
       if (flow.step === ORDER_STEPS.PAYMENT) {
-        const user = getUserByTelegramId(ctx.from.id);
+        const user = await getUserByTelegramId(ctx.from.id);
         if (!PAYMENT_OPTIONS.includes(text)) {
           await ctx.reply('🙂 Выберите способ оплаты кнопкой ниже.', getPaymentKeyboard());
           return;
@@ -1807,7 +1807,7 @@ function createBot(botToken) {
       }
 
       if (flow.step === ORDER_STEPS.READY_CONFIRM) {
-        const user = getUserByTelegramId(ctx.from.id);
+        const user = await getUserByTelegramId(ctx.from.id);
 
         if (text === CHANGE_URGENCY_TEXT) {
           flow.step = ORDER_STEPS.URGENCY;
@@ -1861,14 +1861,18 @@ module.exports = {
 };
 
 if (require.main === module) {
-  loadEnvFile();
-  ensureDb();
-  const bot = createBot(process.env.BOT_TOKEN);
+  (async () => {
+    loadEnvFile();
+    await ensureDb();
+    const bot = createBot(process.env.BOT_TOKEN);
 
-  bot.launch().then(() => {
+    await bot.launch();
     console.log('DomHelperBot started');
-  });
 
-  process.once('SIGINT', () => bot.stop('SIGINT'));
-  process.once('SIGTERM', () => bot.stop('SIGTERM'));
+    process.once('SIGINT', () => bot.stop('SIGINT'));
+    process.once('SIGTERM', () => bot.stop('SIGTERM'));
+  })().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

@@ -11,8 +11,8 @@ test('default db shape contains required collections', () => {
   assert.equal(Array.isArray(DEFAULT_DB.listings), true);
 });
 
-test('json store reads current local db', () => {
-  const db = readDb();
+test('json store reads current local db', async () => {
+  const db = await readDb();
 
   assert.equal(DB_PATH.endsWith('data/db.json'), true);
   assert.equal(Array.isArray(db.houses), true);

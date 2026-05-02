@@ -66,13 +66,14 @@
   - сборка заказа из предложения услуги или аренды
 
 - `src/storage/json-store.js`
-  Минимальный слой локального JSON-хранилища.
+  Совместимый storage-слой.
   Здесь лежат:
   - путь к `data/db.json`
   - `ensureDb()`
   - `readDb()`
   - `writeDb()`
   - `withDb()`
+  - выбор backend: локальный JSON без `DATABASE_URL`, Postgres JSONB state-store при `DATABASE_URL`
 
 - `src/presentation/telegram-text.js`
   Чистое форматирование Telegram-текстов без Telegraf handlers.
@@ -123,6 +124,9 @@
 - `docs/NEXT_SESSION.md`
   Короткий handoff на следующую рабочую сессию.
 
+- `docs/REG_RU_DEPLOYMENT.md`
+  Инструкция переноса Telegram-бота на VPS в REG.RU.
+
 - `landing/`
   Статический лендинг, объясняющий пользу бота для жильцов дома.
 
@@ -140,6 +144,9 @@
 
 - `.dockerignore`
   Исключения для Docker build context.
+
+- `ecosystem.config.cjs`
+  PM2-конфиг для запуска бота на VPS.
 
 ## Логические блоки в `src/index.js`
 

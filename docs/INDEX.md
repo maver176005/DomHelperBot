@@ -40,6 +40,9 @@
 12. [landing/index.html](/Users/mac/WebstormProjects/DomHelperBot/landing/index.html)
     Статический лендинг, объясняющий пользу бота для жильцов дома.
 
+13. [REG_RU_DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/REG_RU_DEPLOYMENT.md)
+    Инструкция переноса бота на VPS в REG.RU.
+
 ## Практическая навигация
 
 - Хочешь понять продукт:
@@ -65,6 +68,9 @@
 
 - Хочешь настроить деплой:
   открой `docs/DEPLOYMENT.md`
+
+- Переносишь бота с Railway на REG.RU:
+  открой `docs/REG_RU_DEPLOYMENT.md`
 
 - Начинаешь новую рабочую сессию:
   открой `docs/NEXT_SESSION.md`

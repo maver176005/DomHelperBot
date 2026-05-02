@@ -12,6 +12,7 @@
 - [docs/DECISIONS.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DECISIONS.md) — ключевые инженерные решения
 - [docs/GTM.md](/Users/mac/WebstormProjects/DomHelperBot/docs/GTM.md) — идея запуска через объявление и QR в подъезде
 - [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md) — GitHub Actions и Railway deploy
+- [docs/REG_RU_DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/REG_RU_DEPLOYMENT.md) — перенос бота на VPS в REG.RU
 - [docs/NEXT_SESSION.md](/Users/mac/WebstormProjects/DomHelperBot/docs/NEXT_SESSION.md) — с чего начать следующую сессию
 - [docs/DATABASE_PLAN.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DATABASE_PLAN.md) — план подключения постоянной БД
 
@@ -64,7 +65,8 @@
 
 - Node.js
 - `telegraf`
-- локальное JSON-хранилище в `data/db.json`
+- локальное JSON-хранилище в `data/db.json` без `DATABASE_URL`
+- Railway Postgres JSONB state-store при заданном `DATABASE_URL`
 
 ## Запуск
 
@@ -86,12 +88,14 @@ cp .env.example .env
 
 ```dotenv
 BOT_TOKEN=your_telegram_bot_token
+DATABASE_URL=
 ```
 
 Также можно вместо `.env` экспортировать переменную окружения вручную:
 
 ```bash
 export BOT_TOKEN=your_telegram_bot_token
+export DATABASE_URL=postgresql_connection_string
 ```
 
 6. Запустите проект:
@@ -109,9 +113,9 @@ npm test
 
 ## Деплой
 
-Для GitHub Actions + Railway autodeploy см. [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md).
+Для GitHub Pages, Railway и общего deployment history см. [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md).
 
-Текущий Railway deploy работает: бот отвечает без локального `npm start`.
+Для переноса бота на VPS в REG.RU см. [docs/REG_RU_DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/REG_RU_DEPLOYMENT.md).
 
 ## Лендинг
 
@@ -137,6 +141,7 @@ npm test
 - При первом запуске автоматически создается `data/db.json`.
 - В файле уже есть 2 тестовых дома.
 - Для MVP дома задаются локально и могут быть изменены вручную в `data/db.json`.
+- Если задан `DATABASE_URL`, данные хранятся в Railway Postgres в таблице `app_state`.
 
 ## Ограничения MVP
 

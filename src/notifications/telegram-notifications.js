@@ -55,7 +55,7 @@ function providerOrderCancelledText(order) {
 }
 
 async function notifyProviders(bot, order, options = {}) {
-  const db = (options.readDb || readDb)();
+  const db = await (options.readDb || readDb)();
   const client = db.users.find((user) => user.id === order.clientUserId);
   const house = db.houses.find((item) => item.id === order.houseId);
   const providers = db.users.filter(
@@ -86,7 +86,7 @@ async function notifyProviders(bot, order, options = {}) {
 }
 
 async function notifyClientOrderAssigned(bot, order, provider, options = {}) {
-  const db = (options.readDb || readDb)();
+  const db = await (options.readDb || readDb)();
   const client = db.users.find((user) => user.id === order.clientUserId);
   if (!client) {
     return;
@@ -96,7 +96,7 @@ async function notifyClientOrderAssigned(bot, order, provider, options = {}) {
 }
 
 async function notifyClientOrderCompleted(bot, order, options = {}) {
-  const db = (options.readDb || readDb)();
+  const db = await (options.readDb || readDb)();
   const client = db.users.find((user) => user.id === order.clientUserId);
   if (!client) {
     return;
@@ -118,7 +118,7 @@ async function notifyClientOrderCompleted(bot, order, options = {}) {
 }
 
 async function notifyProviderOrderConfirmed(bot, order, options = {}) {
-  const db = (options.readDb || readDb)();
+  const db = await (options.readDb || readDb)();
   const provider = db.users.find((user) => user.id === order.providerUserId);
   const client = db.users.find((user) => user.id === order.clientUserId);
 
@@ -130,7 +130,7 @@ async function notifyProviderOrderConfirmed(bot, order, options = {}) {
 }
 
 async function notifyProviderOrderCancelled(bot, order, options = {}) {
-  const db = (options.readDb || readDb)();
+  const db = await (options.readDb || readDb)();
   const provider = db.users.find((user) => user.id === order.providerUserId);
 
   if (!provider) {

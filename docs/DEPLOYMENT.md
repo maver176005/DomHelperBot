@@ -2,6 +2,8 @@
 
 Инструкция для полного цикла GitHub -> CI -> Railway deploy и GitHub Pages deploy.
 
+Для переноса Telegram-бота на VPS в REG.RU см. `docs/REG_RU_DEPLOYMENT.md`.
+
 ## Цель
 
 После настройки один обычный цикл должен быть таким:
@@ -14,7 +16,7 @@ git push
 
 Дальше GitHub Actions запускает проверки, Railway автоматически деплоит бота из подключенной ветки, а GitHub Pages публикует статический лендинг из `landing/`.
 
-Текущий статус: Railway deploy настроен и бот отвечает без локального запуска.
+Текущий статус: Railway deploy был настроен, но из-за оплаты и лимитов готовится перенос runtime бота на REG.RU VPS. Лендинг публикуется через GitHub Pages.
 
 ## Что уже лежит в репозитории
 
@@ -78,9 +80,12 @@ https://maver176005.github.io/DomHelperBot/
 
 ```dotenv
 BOT_TOKEN=telegram_bot_token_from_botfather
+DATABASE_URL=postgresql_connection_string_from_railway
 ```
 
 Без `BOT_TOKEN` бот не стартует: `src/index.js` специально падает с ошибкой, чтобы не запускаться в некорректном состоянии.
+
+Без `DATABASE_URL` бот использует локальный `data/db.json`. Для Railway production нужно задать `DATABASE_URL`, чтобы данные сохранялись в Postgres.
 
 ## Проверка перед push
 
