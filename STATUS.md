@@ -54,6 +54,7 @@
 - добавлен статический лендинг в `landing/`
 - подготовлен PM2-конфиг и инструкция переноса бота на REG.RU VPS
 - storage-слой подготовлен к Railway Postgres через `DATABASE_URL`
+- `DATABASE_URL` включен в Railway Variables, бот запущен и работает на Railway
 - зафиксирован go-to-market через объявление в подъезде и QR-код
 
 ## Бизнес-правила, которые уже соблюдаются
@@ -79,7 +80,7 @@
 
 ## Что просится следующим шагом
 
-- включить `DATABASE_URL` в Railway Variables и проверить production runtime на Postgres
+- проверить сохранение данных после Railway redeploy
 - позже нормализовать Postgres schema из JSONB state-store в таблицы
 - реальные дома для теста в Обнинске
 - web-версия с красивым UI

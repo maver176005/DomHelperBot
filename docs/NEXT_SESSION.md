@@ -4,46 +4,30 @@
 
 ## Первый шаг
 
-Подключить постоянную БД вместо локального `data/db.json`.
+Проверить production persistence на Railway Postgres.
 
 Подробный план: [DATABASE_PLAN.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DATABASE_PLAN.md).
 
 ## Почему это первое
 
-Бот уже работает на Railway без локального запуска, CI/CD настроен, но текущее хранилище файловое.
-На Railway файл внутри контейнера не является надежным продуктовым хранилищем.
+Бот снова работает на Railway, `DATABASE_URL` добавлен, storage-слой переключен на Postgres-backed JSONB state-store.
+Теперь нужно подтвердить не только старт процесса, но и сохранение данных после redeploy.
 
-## Рекомендуемое направление
+## Проверить в начале сессии
 
-Для нормального продукта:
+- GitHub Actions `CI` зеленый после последнего push.
+- Railway deployment активный.
+- В логах есть `DomHelperBot started`.
+- В Telegram бот отвечает на `/start`.
+- После тестовой регистрации данные остаются после `Redeploy`.
+- В Railway Postgres есть таблица `app_state`.
 
-- Railway Postgres;
-- `DATABASE_URL` в Railway Variables;
-- отдельный storage/repository слой вместо прямой записи в JSON;
-- миграция текущих сущностей:
-  - houses;
-  - users;
-  - orders;
-  - listings.
+## Следующие продуктовые варианты
 
-## Первый технический шаг
-
-Начать с:
-
-```bash
-npm install pg
-```
-
-Затем добавить:
-
-- `db/migrations/001_init.sql`
-- `scripts/migrate.js`
-- `src/storage/postgres-store.js`
-- `src/storage/index.js`
-
-Так, чтобы без `DATABASE_URL` бот продолжал работать на JSON, а с `DATABASE_URL` переключался на Postgres.
-
-Для самого быстрого временного MVP можно рассмотреть Railway Volume, но это промежуточное решение.
+- Telegram Web App / Mini App для красивого интерфейса внутри Telegram.
+- Нормализовать Postgres schema из `app_state` в таблицы `houses/users/orders/listings`.
+- Улучшить `Listing`: категории, поиск, фото, календарь/слоты.
+- Printable poster layout на основе текущего лендинга и QR.
 
 ## Стартовая проверка
 
@@ -55,7 +39,7 @@ npm test
 git status --short
 ```
 
-После подключения БД:
+После изменений:
 
 ```bash
 npm run check
