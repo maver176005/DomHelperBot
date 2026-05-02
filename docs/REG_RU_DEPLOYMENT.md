@@ -1,8 +1,26 @@
 # REG_RU_DEPLOYMENT.md
 
-План переноса Telegram-бота с Railway на VPS в REG.RU.
+Резервный план запуска Telegram-бота на VPS в REG.RU.
 
-Лендинг остается на GitHub Pages. На REG.RU запускается только Node.js бот.
+На 2026-05-03 REG.RU не является основным runtime проекта. Основной production runtime: Railway + Railway Postgres. Лендинг остается на GitHub Pages.
+
+## Статус на 2026-05-03
+
+При тестовом запуске на REG.RU бот упал на запросе к Telegram API:
+
+```text
+FetchError: request to https://api.telegram.org/.../getMe failed, reason:
+code: ETIMEDOUT
+```
+
+Ответ поддержки REG.RU: наблюдаются массовые проблемы с доступностью или медленным ответом `api.telegram.org`. Вероятная причина - замедление Telegram на территории РФ через ТСПУ у операторов связи. Проблема не относится к инфраструктуре REG.RU и дата-центра.
+
+Решение проекта:
+
+- не переносить основной runtime на REG.RU;
+- не запускать постоянный PM2-процесс на REG.RU без успешной сетевой проверки;
+- использовать Railway как основной runtime;
+- рассматривать REG.RU только как запасной вариант для тестов или аварийного запуска.
 
 ## Рекомендуемый сервер
 
@@ -14,9 +32,20 @@
 
 REG.RU поддерживает Linux VPS/облачные серверы с Ubuntu, Debian и готовыми приложениями, включая Node.js. SSH-ключ можно добавить при создании или переустановке облачного сервера.
 
+## Обязательная проверка сети
+
+Перед установкой Node.js, PM2 и проекта проверить доступность Telegram API с самого VPS:
+
+```bash
+ssh root@SERVER_IP
+curl -I --connect-timeout 10 https://api.telegram.org
+```
+
+Если команда зависает, возвращает timeout или отвечает заметно медленно, настройку бота на этом VPS не продолжать.
+
 ## Важно перед переносом
 
-Перед запуском бота на VPS нужно остановить Railway service.
+Если REG.RU когда-нибудь будет выбран как основной runtime, перед запуском бота на VPS нужно остановить Railway service.
 
 Причина: бот сейчас работает через Telegram polling. Если одновременно запустить два экземпляра с одним `BOT_TOKEN`, они будут конкурировать за updates и могут ловить конфликт polling.
 
@@ -144,10 +173,11 @@ pm2 logs dom-helper-bot
 
 ## Текущие ограничения
 
-- Данные пока пишутся в `data/db.json` на VPS.
-- Это надежнее, чем ephemeral filesystem Railway, но все еще не полноценная БД.
-- Следующий технический шаг остается прежним: подключить Postgres.
-- До подключения БД нужно делать backup `data/db.json`.
+- Основной production runtime сейчас Railway.
+- Production data хранится в Railway Postgres через `DATABASE_URL`.
+- На VPS без `DATABASE_URL` бот вернется к локальному `data/db.json`.
+- РФ VPS может не иметь стабильного исходящего доступа к `api.telegram.org`.
+- До использования VPS в production нужно отдельно проверить сеть, storage mode и backup-процедуру.
 
 ## Backup локального JSON-хранилища
 
