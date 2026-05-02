@@ -13,6 +13,7 @@
 - [docs/GTM.md](/Users/mac/WebstormProjects/DomHelperBot/docs/GTM.md) — идея запуска через объявление и QR в подъезде
 - [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md) — GitHub Actions и Railway deploy
 - [docs/NEXT_SESSION.md](/Users/mac/WebstormProjects/DomHelperBot/docs/NEXT_SESSION.md) — с чего начать следующую сессию
+- [docs/DATABASE_PLAN.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DATABASE_PLAN.md) — план подключения постоянной БД
 
 Что уже есть:
 

@@ -34,6 +34,9 @@
 10. [NEXT_SESSION.md](/Users/mac/WebstormProjects/DomHelperBot/docs/NEXT_SESSION.md)
     Первый шаг следующей сессии: подключить постоянную БД.
 
+11. [DATABASE_PLAN.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DATABASE_PLAN.md)
+    План миграции с `data/db.json` на Railway Postgres.
+
 ## Практическая навигация
 
 - Хочешь понять продукт:
@@ -62,6 +65,9 @@
 
 - Начинаешь новую рабочую сессию:
   открой `docs/NEXT_SESSION.md`
+
+- Подключаешь постоянную БД:
+  открой `docs/DATABASE_PLAN.md`
 
 ## Почему source-of-truth файлы не переносились в `docs/`
 
