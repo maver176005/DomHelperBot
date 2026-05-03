@@ -180,7 +180,7 @@ async function showOrderDetails(ctx, orderId) {
   }
 
   const summary = buildOrderSummary(order, db, user);
-  const inlineKeyboard = getOrderInlineKeyboard(order, user);
+  const inlineKeyboard = getOrderInlineKeyboard(order, user, { showOpen: false });
   await ctx.reply(summary, {
     ...getMainKeyboard(user),
     ...(inlineKeyboard || {}),

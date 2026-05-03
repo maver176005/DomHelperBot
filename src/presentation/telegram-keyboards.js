@@ -106,17 +106,29 @@ function isFinishedOrderStatus(status) {
   return ['confirmed', 'cancelled'].includes(status);
 }
 
-function getOrderInlineKeyboard(order, user) {
+function getOrderInlineKeyboard(order, user, options = {}) {
   if (!user) {
     return undefined;
   }
 
-  const buttons = [
-    [Markup.button.callback('Открыть заказ', `view_order:${order.id}`)],
-  ];
+  const { showOpen = true } = options;
+  const buttons = [];
+
+  if (showOpen) {
+    buttons.push([Markup.button.callback('Открыть заказ', `view_order:${order.id}`)]);
+  }
 
   if (order.clientUserId === user.id && order.status === 'created') {
     buttons.push([Markup.button.callback('Отменить заказ', `cancel_order:${order.id}`)]);
+  }
+
+  if (order.clientUserId === user.id && order.status === 'completed') {
+    buttons.push([Markup.button.callback('Подтвердить выполнение', `confirm_order:${order.id}`)]);
+  }
+
+  if (order.providerUserId === user.id && order.status === 'assigned') {
+    const completeText = order.type === 'trash_removal' ? 'Отправить фото после' : 'Отметить выполненным';
+    buttons.push([Markup.button.callback(completeText, `complete_order:${order.id}`)]);
   }
 
   if (
@@ -125,6 +137,10 @@ function getOrderInlineKeyboard(order, user) {
     isFinishedOrderStatus(order.status)
   ) {
     buttons.push([Markup.button.callback('Повторить заказ', `repeat_order:${order.id}`)]);
+  }
+
+  if (!buttons.length) {
+    return undefined;
   }
 
   return Markup.inlineKeyboard(buttons);

@@ -79,6 +79,44 @@ test('order inline keyboard reflects order actions for client', () => {
   assert.deepEqual(callbacks, ['view_order:order_1', 'cancel_order:order_1']);
 });
 
+test('order details keyboard does not reopen itself', () => {
+  const order = {
+    id: 'order_1',
+    type: 'trash_removal',
+    status: 'created',
+    clientUserId: 'user_1',
+  };
+
+  const rows = inlineRows(getOrderInlineKeyboard(order, { id: 'user_1' }, { showOpen: false }));
+  const callbacks = rows.flat().map((button) => button.callback_data);
+
+  assert.deepEqual(callbacks, ['cancel_order:order_1']);
+});
+
+test('order inline keyboard exposes status actions', () => {
+  const completedOrder = {
+    id: 'order_1',
+    type: 'trash_removal',
+    status: 'completed',
+    clientUserId: 'client_1',
+    providerUserId: 'provider_1',
+  };
+  const assignedOrder = {
+    ...completedOrder,
+    status: 'assigned',
+  };
+
+  const clientCallbacks = inlineRows(getOrderInlineKeyboard(completedOrder, { id: 'client_1' }))
+    .flat()
+    .map((button) => button.callback_data);
+  const providerCallbacks = inlineRows(getOrderInlineKeyboard(assignedOrder, { id: 'provider_1' }))
+    .flat()
+    .map((button) => button.callback_data);
+
+  assert.equal(clientCallbacks.includes('confirm_order:order_1'), true);
+  assert.equal(providerCallbacks.includes('complete_order:order_1'), true);
+});
+
 test('order inline keyboard adds repeat for finished client orders', () => {
   const order = {
     id: 'order_1',
