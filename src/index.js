@@ -548,6 +548,10 @@ async function showRequestTypeSelector(ctx) {
 
   const db = await readDb();
   const stats = getProviderAvailabilityStats(db, user.houseId);
+  const popularServices = getPopularServices(db, user.houseId).slice(0, 3);
+  const popularLine = popularServices
+    .map((service) => service.title)
+    .join(', ');
 
   await ctx.reply(
     [
@@ -558,9 +562,10 @@ async function showRequestTypeSelector(ctx) {
       stats.readyNow === 0
         ? '⚠️ Сейчас никто не отметил себя доступным. Запрос можно создать, но быстрый отклик не гарантирован.'
         : '✨ Есть соседи, которые готовы быстро откликнуться.',
+      popularLine ? `🔥 Часто выбирают: ${popularLine}` : null,
       '',
       'Выберите готовый тип запроса ниже.',
-    ].join('\n'),
+    ].filter(Boolean).join('\n'),
     {
       ...getMainKeyboard(user),
       ...getRequestTypeInlineKeyboard(),
@@ -732,9 +737,9 @@ async function showListingsHub(ctx) {
 
   await ctx.reply(
     [
-      '🧰 Услуги и аренда',
+      '📋 Предложения дома',
       '',
-      'Здесь соседи публикуют, что могут сделать или дать во временное пользование.',
+      'Здесь соседи публикуют услуги и вещи, которые готовы дать во временное пользование.',
       `Активных предложений в вашем доме: ${activeCount}.`,
     ].join('\n'),
     {

@@ -36,6 +36,8 @@ test('main keyboard includes provider-only actions for providers', () => {
 
   assert.equal(flat.includes(MENU.HOUSE_REQUESTS), true);
   assert.equal(flat.includes(MENU.AVAILABILITY), true);
+  assert.equal(flat.includes(MENU.FUTURE_MODULES), true);
+  assert.equal(flat.includes(MENU.POPULAR), false);
 });
 
 test('payment keyboard includes cancel action', () => {

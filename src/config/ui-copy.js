@@ -8,7 +8,7 @@ const MENU = {
   MY_HOUSE: '🏠 Мой дом',
   INVITE_NEIGHBORS: '📎 Пригласить соседей',
   PROFILE: '✏️ Профиль',
-  FUTURE_MODULES: '🧰 Услуги и аренда',
+  FUTURE_MODULES: '📋 Предложения дома',
   START_REGISTRATION: '🚀 Начать регистрацию',
 };
 

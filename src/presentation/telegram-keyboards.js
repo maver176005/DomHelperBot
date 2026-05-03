@@ -18,7 +18,6 @@ function getMainKeyboard(user) {
   if (user) {
     buttons.push([MENU.NEED_HELP, MENU.MY_ORDERS]);
     buttons.push([MENU.COMPLETED_ORDERS]);
-    buttons.push([MENU.POPULAR]);
     if (user.role === 'provider') {
       buttons.push([MENU.HOUSE_REQUESTS]);
       buttons.push([MENU.AVAILABILITY]);
