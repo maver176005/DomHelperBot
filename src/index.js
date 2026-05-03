@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const QRCode = require('qrcode');
 const { Telegraf, Markup, session } = require('telegraf');
 const {
   PAYMENT_OPTIONS,
@@ -25,10 +26,14 @@ const {
   CHANGE_HOUSE_TEXT,
   CONFIRM_HOUSE_TEXT,
   DEFAULT_PILOT_CITY,
+  buildHouseInviteLink,
   buildHouseAddress,
   buildHouseTitle,
   buildNormalizedAddress,
+  findHouseByJoinCode,
   findHouseByNormalizedAddress,
+  generateJoinCode,
+  parseHouseStartPayload,
 } = require('./domain/house-helpers');
 const {
   isValidFloor,
@@ -82,6 +87,7 @@ const {
 } = require('./notifications/telegram-notifications');
 
 const ENV_PATH = path.join(__dirname, '..', '.env');
+const BOT_USERNAME = process.env.BOT_USERNAME || 'YouDomHelperBot';
 
 const REGISTRATION_STEPS = {
   NAME: 'registration_name',
@@ -171,6 +177,15 @@ function generateId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function getBotUsername() {
+  return process.env.BOT_USERNAME || BOT_USERNAME;
+}
+
+function getStartPayload(ctx) {
+  const text = ctx.message && ctx.message.text ? ctx.message.text : '';
+  return text.split(/\s+/)[1] || '';
+}
+
 function getActiveHouseButtons(db) {
   const houseButtons = db.houses
     .filter((house) => house.isActive && house.city === DEFAULT_PILOT_CITY)
@@ -180,6 +195,22 @@ function getActiveHouseButtons(db) {
   houseButtons.push([ADD_HOUSE_TEXT]);
   houseButtons.push([CANCEL_TEXT]);
   return houseButtons;
+}
+
+async function resolveHouseStartPayload(ctx) {
+  const joinCode = parseHouseStartPayload(getStartPayload(ctx));
+  if (!joinCode) {
+    return null;
+  }
+
+  const db = await readDb();
+  const house = findHouseByJoinCode(db, joinCode);
+  if (!house) {
+    return null;
+  }
+
+  ctx.session.pendingHouseId = house.id;
+  return house;
 }
 
 function setRegistrationHouseAndAskEntrance(ctx, flow, house) {
@@ -334,6 +365,45 @@ async function showMyHouse(ctx) {
   );
 }
 
+async function showHouseInvite(ctx) {
+  const user = await getUserByTelegramId(ctx.from.id);
+  if (!user) {
+    await showStart(ctx, '🏡 Сначала зарегистрируйтесь.');
+    return;
+  }
+
+  const house = await getHouse(user.houseId);
+  if (!house || !house.joinCode) {
+    await ctx.reply('🏠 Для вашего дома пока не готова ссылка приглашения. Попробуйте позже.', getMainKeyboard(user));
+    return;
+  }
+
+  const inviteLink = buildHouseInviteLink(getBotUsername(), house);
+  const caption = [
+    '📎 Пригласить соседей',
+    '',
+    `Дом: ${houseLabel(house)}`,
+    '',
+    inviteLink,
+    '',
+    'Эту ссылку можно отправить в чат дома. QR-код можно распечатать и повесить в подъезде.',
+  ].join('\n');
+
+  const qrBuffer = await QRCode.toBuffer(inviteLink, {
+    errorCorrectionLevel: 'M',
+    margin: 2,
+    width: 720,
+  });
+
+  await ctx.replyWithPhoto(
+    { source: qrBuffer },
+    {
+      caption,
+      ...getMainKeyboard(user),
+    }
+  );
+}
+
 async function showAvailabilitySettings(ctx) {
   const user = await getUserByTelegramId(ctx.from.id);
   if (!user) {
@@ -399,7 +469,10 @@ function startRegistration(ctx, options = {}) {
       entrance: existingUser.entrance,
       floor: existingUser.floor,
       apartment: existingUser.apartment,
-    } : {},
+    } : {
+      houseId: ctx.session.pendingHouseId || null,
+      joinedByHouseLink: Boolean(ctx.session.pendingHouseId),
+    },
   };
 
   if (isEdit && existingUser) {
@@ -792,6 +865,30 @@ function createBot(botToken) {
 
   bot.start(async (ctx) => {
     clearFlow(ctx);
+    const invitedHouse = await resolveHouseStartPayload(ctx);
+    if (invitedHouse) {
+      const user = await getUserByTelegramId(ctx.from.id);
+      if (user) {
+        await ctx.reply(
+          [
+            `🏠 Ссылка ведет в дом: ${houseLabel(invitedHouse)}.`,
+            'Если хотите сменить дом, нажмите "Профиль" и пройдите регистрацию заново.',
+          ].join('\n'),
+          getMainKeyboard(user)
+        );
+        return;
+      }
+
+      await ctx.reply(
+        [
+          `🏠 Вы перешли по ссылке дома: ${houseLabel(invitedHouse)}.`,
+          'Начните регистрацию — дом будет выбран автоматически.',
+        ].join('\n'),
+        getMainKeyboard(null)
+      );
+      return;
+    }
+
     await showStart(ctx);
   });
 
@@ -805,6 +902,10 @@ function createBot(botToken) {
 
   bot.command('myhouse', async (ctx) => {
     await showMyHouse(ctx);
+  });
+
+  bot.command('houseqr', async (ctx) => {
+    await showHouseInvite(ctx);
   });
 
   bot.command('orders', async (ctx) => {
@@ -836,6 +937,7 @@ function createBot(botToken) {
         '/popular - популярные услуги',
         '/availability - доступность исполнителя',
         '/myhouse - мой дом',
+        '/houseqr - ссылка и QR для приглашения соседей',
         '/help - эта подсказка',
         '',
         '🔄 В экране "Мой дом" можно быстро переключить роль.',
@@ -1436,6 +1538,10 @@ function createBot(botToken) {
     await showMyHouse(ctx);
   });
 
+  bot.hears(MENU.INVITE_NEIGHBORS, async (ctx) => {
+    await showHouseInvite(ctx);
+  });
+
   bot.hears(MENU.HOUSE_REQUESTS, async (ctx) => {
     const user = await getUserByTelegramId(ctx.from.id);
     if (!user) {
@@ -1652,6 +1758,22 @@ function createBot(botToken) {
 
         flow.data.role = text === 'Исполнитель' ? 'provider' : 'client';
         flow.data.city = DEFAULT_PILOT_CITY;
+
+        if (flow.data.houseId) {
+          const house = await getHouse(flow.data.houseId);
+          if (house) {
+            await ctx.reply(
+              [
+                `🏠 Дом выбран по ссылке: ${houseLabel(house)}`,
+                'Теперь укажите данные квартиры.',
+              ].join('\n'),
+              getCancelKeyboard()
+            );
+            await setRegistrationHouseAndAskEntrance(ctx, flow, house);
+            return;
+          }
+        }
+
         flow.step = REGISTRATION_STEPS.HOUSE;
 
         const db = await readDb();
@@ -1764,6 +1886,7 @@ function createBot(botToken) {
             houseNumber: flow.data.houseNumber,
             address: buildHouseAddress(flow.data.houseStreet, flow.data.houseNumber),
             normalizedAddress: flow.data.normalizedAddress,
+            joinCode: generateJoinCode(),
             isActive: true,
             status: 'active',
             source: 'user',
@@ -1776,6 +1899,7 @@ function createBot(botToken) {
         });
 
         await ctx.reply(`✅ Дом добавлен: ${houseLabel(newHouse)}`, getCancelKeyboard());
+        flow.data.createdHouseDuringRegistration = true;
         await setRegistrationHouseAndAskEntrance(ctx, flow, newHouse);
         return;
       }
@@ -1828,6 +1952,7 @@ function createBot(botToken) {
             floor: flow.data.floor,
             apartment: text,
             isResidentVerified: false,
+            joinedByHouseLink: Boolean(flow.data.joinedByHouseLink || (existingUser && existingUser.joinedByHouseLink)),
             updatedAt: new Date().toISOString(),
           };
 
@@ -1844,8 +1969,16 @@ function createBot(botToken) {
         });
 
         clearFlow(ctx);
+        ctx.session.pendingHouseId = null;
         await showStart(ctx, `🎉 Регистрация завершена для ${createdUser.name}.`);
         await ctx.reply('✨ Профиль сохранен. Можно создать заказ или посмотреть свои заказы.', getMainKeyboard(createdUser));
+        if (flow.data.joinedByHouseLink) {
+          await ctx.reply('📎 Вы присоединились по ссылке дома. Ее можно переслать соседям через кнопку "Пригласить соседей".', getMainKeyboard(createdUser));
+        }
+        if (flow.data.createdHouseDuringRegistration) {
+          await ctx.reply('📎 Вы добавили новый дом. Пригласите соседей по домовой ссылке или QR-коду.', getMainKeyboard(createdUser));
+          await showHouseInvite(ctx);
+        }
         return;
       }
     }

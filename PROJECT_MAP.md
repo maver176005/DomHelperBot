@@ -74,6 +74,8 @@
   - нормализация улицы и номера дома
   - сборка display-адреса
   - поиск дубля по `normalizedAddress`
+  - генерация и поиск `joinCode`
+  - сборка Telegram start-ссылки дома
 
 - `src/storage/json-store.js`
   Совместимый storage-слой.
@@ -181,6 +183,9 @@
 
 - Если меняется выбор или добавление дома:
   смотри `src/domain/house-helpers.js`, `REGISTRATION_STEPS.HOUSE*` и registration handler в `src/index.js`
+
+- Если меняется домовой QR/invite-flow:
+  смотри `showHouseInvite()`, `/houseqr`, `/start house_<joinCode>` и `src/domain/house-helpers.js`
 
 - Если меняются правила проверки данных регистрации:
   смотри `src/domain/registration-validation.js`

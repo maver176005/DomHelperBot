@@ -24,6 +24,7 @@ function getMainKeyboard(user) {
       buttons.push([MENU.AVAILABILITY]);
     }
     buttons.push([MENU.MY_HOUSE, MENU.PROFILE]);
+    buttons.push([MENU.INVITE_NEIGHBORS]);
     buttons.push([MENU.FUTURE_MODULES]);
   } else {
     buttons.push([MENU.START_REGISTRATION]);

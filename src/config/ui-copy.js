@@ -6,6 +6,7 @@ const MENU = {
   HOUSE_REQUESTS: '🔥 Запросы дома',
   AVAILABILITY: '🟢 Моя доступность',
   MY_HOUSE: '🏠 Мой дом',
+  INVITE_NEIGHBORS: '📎 Пригласить соседей',
   PROFILE: '✏️ Профиль',
   FUTURE_MODULES: '🧰 Услуги и аренда',
   START_REGISTRATION: '🚀 Начать регистрацию',

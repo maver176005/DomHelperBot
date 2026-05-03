@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 const { DEFAULT_DB, DEFAULT_HOUSES } = require('../config/seed-data');
+const { ensureHouseJoinCodes } = require('../domain/house-helpers');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const DB_PATH = path.join(DATA_DIR, 'db.json');
@@ -39,7 +40,7 @@ function mergeSeedHouses(db) {
     }
   }
 
-  return nextDb;
+  return ensureHouseJoinCodes(nextDb);
 }
 
 function getDatabaseUrl() {

@@ -23,6 +23,8 @@
 - привязка к дому;
 - пилотный город `Обнинск`;
 - выбор существующего дома или добавление своего дома при регистрации;
+- домовая ссылка и QR-код для приглашения соседей;
+- автоматический выбор дома при входе по ссылке вида `t.me/YouDomHelperBot?start=house_...`;
 - общий сценарий `🙋 Мне нужна помощь`;
 - выбор типа запроса;
 - создание соседских запросов внутри дома;
@@ -93,6 +95,7 @@ cp .env.example .env
 
 ```dotenv
 BOT_TOKEN=your_telegram_bot_token
+BOT_USERNAME=YouDomHelperBot
 DATABASE_URL=
 ```
 
@@ -100,6 +103,7 @@ DATABASE_URL=
 
 ```bash
 export BOT_TOKEN=your_telegram_bot_token
+export BOT_USERNAME=YouDomHelperBot
 export DATABASE_URL=postgresql_connection_string
 ```
 
@@ -121,6 +125,16 @@ npm test
 Для GitHub Pages, Railway и общего deployment history см. [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md).
 
 Для резервного плана запуска на VPS в REG.RU см. [docs/REG_RU_DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/REG_RU_DEPLOYMENT.md). REG.RU не является основным production runtime.
+
+## Приглашение соседей
+
+У каждого дома есть уникальная ссылка вида:
+
+```text
+https://t.me/YouDomHelperBot?start=house_<joinCode>
+```
+
+Команда `/houseqr` или кнопка `📎 Пригласить соседей` отправляет ссылку и QR-код текущего дома. Если новый житель открывает бота по такой ссылке, дом выбирается автоматически при регистрации.
 
 ## Лендинг
 
