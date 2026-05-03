@@ -253,6 +253,28 @@ function listingOrderCreatedText(listing, order, client) {
   ].join('\n');
 }
 
+function listingOrderNextStepText(listing, owner) {
+  const lines = [
+    listing.type === 'rental'
+      ? '✅ Заказ создан. Вещь снята из активных предложений, чтобы ее не заказали повторно.'
+      : '✅ Заказ создан и сразу назначен автору предложения.',
+    '',
+    listing.type === 'rental'
+      ? 'Договоритесь с автором, когда и где забрать вещь.'
+      : 'Напишите автору, чтобы уточнить детали выполнения.',
+  ];
+
+  if (owner && owner.username) {
+    lines.push(`Telegram: https://t.me/${owner.username}`);
+  }
+
+  if (owner && owner.phone) {
+    lines.push(`Телефон: ${owner.phone}`);
+  }
+
+  return lines.join('\n');
+}
+
 module.exports = {
   assignedOrderText,
   buildOrderSummary,
@@ -261,6 +283,7 @@ module.exports = {
   listingCardText,
   listingInterestText,
   listingOrderCreatedText,
+  listingOrderNextStepText,
   listingStatusLabel,
   listingTypeLabel,
   orderSummaryForClient,

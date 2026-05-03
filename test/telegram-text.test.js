@@ -7,6 +7,7 @@ const {
   listingCardText,
   listingInterestText,
   listingOrderCreatedText,
+  listingOrderNextStepText,
   listingTypeLabel,
   profileText,
   publicOrderText,
@@ -107,5 +108,9 @@ test('listing text formats service and rental offers', () => {
   assert.match(
     listingOrderCreatedText(serviceListing, { id: 'order_1', status: 'assigned' }, client),
     /создан запрос #order_1/
+  );
+  assert.match(
+    listingOrderNextStepText({ ...serviceListing, type: 'rental' }, { username: 'petr', phone: '+79991112233' }),
+    /забрать вещь[\s\S]*https:\/\/t\.me\/petr[\s\S]*\+79991112233/
   );
 });

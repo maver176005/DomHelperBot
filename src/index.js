@@ -49,6 +49,7 @@ const {
   listingCardText,
   listingInterestText,
   listingOrderCreatedText,
+  listingOrderNextStepText,
   listingTypeLabel,
   orderSummaryForProvider,
   profileText,
@@ -1498,12 +1499,7 @@ function createBot(botToken) {
     }
 
     await ctx.answerCbQuery('Заказ создан.');
-    await ctx.reply(
-      result.listing.type === 'rental'
-        ? '✅ Заказ создан. Вещь снята из активных предложений, чтобы ее не заказали повторно.'
-        : '✅ Заказ создан и сразу назначен автору предложения.',
-      getMainKeyboard(user)
-    );
+    await ctx.reply(listingOrderNextStepText(result.listing, result.owner), getMainKeyboard(user));
     await showOrderDetails(ctx, result.order.id);
 
     try {
