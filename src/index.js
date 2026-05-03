@@ -1495,7 +1495,7 @@ function createBot(botToken) {
 
     const phone = normalizePhone(ctx.message.contact.phone_number);
     if (!isValidPhone(phone)) {
-      await ctx.reply('📱 Не получилось распознать телефон. Введите номер текстом, минимум 10 цифр.');
+      await ctx.reply('📱 Не получилось распознать телефон. Введите российский номер: +7XXXXXXXXXX или 8XXXXXXXXXX.');
       return;
     }
 
@@ -1630,7 +1630,7 @@ function createBot(botToken) {
       if (flow.step === REGISTRATION_STEPS.PHONE) {
         const phone = normalizePhone(text);
         if (!isValidPhone(phone)) {
-          await ctx.reply('📱 Введите корректный телефон: минимум 10 цифр, можно с плюсом.');
+          await ctx.reply('📱 Введите российский номер: +7XXXXXXXXXX или 8XXXXXXXXXX. Буквы и короткие номера не подходят.');
           return;
         }
 

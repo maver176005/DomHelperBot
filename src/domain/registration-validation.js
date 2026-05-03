@@ -1,18 +1,33 @@
 function isValidName(value) {
   const trimmed = value.trim();
-  return trimmed.length >= 2 && trimmed.length <= 80;
+  return trimmed.length >= 2 && trimmed.length <= 80 && /[a-zа-яё]/i.test(trimmed) && !/\d/.test(trimmed);
 }
 
 function normalizePhone(value) {
   const trimmed = value.trim();
-  const hasPlus = trimmed.startsWith('+');
+  if (/[a-zа-яё]/i.test(trimmed)) {
+    return '';
+  }
+
   const digits = trimmed.replace(/\D/g, '');
-  return hasPlus ? `+${digits}` : digits;
+
+  if (digits.length === 10) {
+    return `+7${digits}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith('8')) {
+    return `+7${digits.slice(1)}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith('7')) {
+    return `+${digits}`;
+  }
+
+  return '';
 }
 
 function isValidPhone(value) {
-  const digits = value.replace(/\D/g, '');
-  return digits.length >= 10 && digits.length <= 15;
+  return /^\+7\d{10}$/.test(value);
 }
 
 function isValidShortAddressPart(value) {
