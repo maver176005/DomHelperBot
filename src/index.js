@@ -466,11 +466,13 @@ function startRegistration(ctx, options = {}) {
       phone: existingUser.phone,
       role: existingUser.role,
       houseId: existingUser.houseId,
+      houseAutoSelected: false,
       entrance: existingUser.entrance,
       floor: existingUser.floor,
       apartment: existingUser.apartment,
     } : {
       houseId: ctx.session.pendingHouseId || null,
+      houseAutoSelected: Boolean(ctx.session.pendingHouseId),
       joinedByHouseLink: Boolean(ctx.session.pendingHouseId),
     },
   };
@@ -1759,7 +1761,7 @@ function createBot(botToken) {
         flow.data.role = text === 'Исполнитель' ? 'provider' : 'client';
         flow.data.city = DEFAULT_PILOT_CITY;
 
-        if (flow.data.houseId) {
+        if (flow.data.houseAutoSelected && flow.data.houseId) {
           const house = await getHouse(flow.data.houseId);
           if (house) {
             await ctx.reply(
