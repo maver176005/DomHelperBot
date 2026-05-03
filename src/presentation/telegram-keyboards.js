@@ -127,9 +127,18 @@ function getOrderInlineKeyboard(order, user, options = {}) {
     buttons.push([Markup.button.callback('Подтвердить выполнение', `confirm_order:${order.id}`)]);
   }
 
-  if (order.providerUserId === user.id && order.status === 'assigned') {
+  if (order.listingType === 'rental' && order.clientUserId === user.id && order.status === 'rented') {
+    buttons.push([Markup.button.callback('Готов вернуть', `request_return:${order.id}`)]);
+  }
+
+  if (
+    order.providerUserId === user.id &&
+    (order.status === 'assigned' || (order.listingType === 'rental' && order.status === 'return_requested'))
+  ) {
     const completeText = order.listingType === 'rental'
-      ? 'Вещь вернулась'
+      ? order.status === 'assigned'
+        ? 'Передал вещь'
+        : 'Вещь вернулась'
       : order.type === 'trash_removal'
         ? 'Отправить фото после'
         : 'Отметить выполненным';

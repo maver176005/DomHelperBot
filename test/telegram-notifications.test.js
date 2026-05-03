@@ -4,10 +4,14 @@ const {
   clientOrderAssignedText,
   clientOrderCompletedPhotoCaption,
   clientOrderCompletedText,
+  clientRentalHandedOverText,
   notifyClientOrderCompleted,
+  notifyClientRentalHandedOver,
+  notifyProviderRentalReturnRequested,
   notifyProviders,
   providerOrderCancelledText,
   providerOrderConfirmedText,
+  providerRentalReturnRequestedText,
 } = require('../src/notifications/telegram-notifications');
 
 function createBotSpy() {
@@ -83,6 +87,8 @@ test('notification text builders include key order details', () => {
   assert.match(clientOrderAssignedText({ ...order, status: 'assigned' }, { name: 'Петр' }), /Запрос #order_1/);
   assert.match(clientOrderCompletedText({ ...order, status: 'completed' }), /Ожидает подтверждения клиента/);
   assert.match(clientOrderCompletedText({ ...order, listingType: 'rental', status: 'confirmed' }), /Оцените аренду/);
+  assert.match(clientRentalHandedOverText({ ...order, listingType: 'rental', status: 'rented' }), /Готов вернуть/);
+  assert.match(providerRentalReturnRequestedText({ ...order, listingType: 'rental', status: 'return_requested' }, { name: 'Анна' }), /Вещь вернулась/);
   assert.match(clientOrderCompletedPhotoCaption({ ...order, status: 'completed' }), /фото после/);
   assert.match(providerOrderConfirmedText({ ...order, status: 'confirmed' }, { name: 'Анна' }), /Клиент подтвердил/);
   assert.match(providerOrderCancelledText({ ...order, status: 'cancelled' }), /отменен клиентом/);
@@ -137,4 +143,28 @@ test('notifyClientOrderCompleted asks client to rate returned rental', async () 
   assert.equal(calls[0].method, 'sendMessage');
   assert.match(calls[0].args[1], /Владелец подтвердил возврат/);
   assert.equal(calls[0].args[2].reply_markup.inline_keyboard[0][0].callback_data, 'rate_order:order_1:1');
+});
+
+test('rental handover and return request notifications target the right side', async () => {
+  const clientNotice = createBotSpy();
+  await notifyClientRentalHandedOver(
+    clientNotice.bot,
+    { ...order, type: 'service', listingType: 'rental', status: 'rented' },
+    { readDb: createDb }
+  );
+
+  assert.equal(clientNotice.calls[0].args[0], '100');
+  assert.match(clientNotice.calls[0].args[1], /Готов вернуть/);
+  assert.equal(clientNotice.calls[0].args[2].reply_markup.inline_keyboard[1][0].callback_data, 'request_return:order_1');
+
+  const providerNotice = createBotSpy();
+  await notifyProviderRentalReturnRequested(
+    providerNotice.bot,
+    { ...order, type: 'service', listingType: 'rental', status: 'return_requested' },
+    { readDb: createDb }
+  );
+
+  assert.equal(providerNotice.calls[0].args[0], '200');
+  assert.match(providerNotice.calls[0].args[1], /Клиент готов вернуть/);
+  assert.equal(providerNotice.calls[0].args[2].reply_markup.inline_keyboard[1][0].callback_data, 'complete_order:order_1');
 });

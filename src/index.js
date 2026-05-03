@@ -83,8 +83,10 @@ const {
 const {
   notifyClientOrderAssigned,
   notifyClientOrderCompleted,
+  notifyClientRentalHandedOver,
   notifyProviderOrderCancelled,
   notifyProviderOrderConfirmed,
+  notifyProviderRentalReturnRequested,
   notifyProviders,
 } = require('./notifications/telegram-notifications');
 
@@ -1177,12 +1179,18 @@ function createBot(botToken) {
           return { error: 'Можно завершать только свой запрос.' };
         }
 
-        if (currentOrder.status !== 'assigned') {
-          return { error: 'Можно завершать только заказ в работе.' };
-        }
-
-        currentOrder.completedAt = new Date().toISOString();
         if (currentOrder.listingType === 'rental') {
+          if (currentOrder.status === 'assigned') {
+            currentOrder.status = 'rented';
+            currentOrder.handedOverAt = new Date().toISOString();
+            return { order: currentOrder, rentalEvent: 'handed_over' };
+          }
+
+          if (currentOrder.status !== 'return_requested') {
+            return { error: 'Возврат можно подтвердить после сигнала клиента "Готов вернуть".' };
+          }
+
+          currentOrder.completedAt = new Date().toISOString();
           currentOrder.status = 'confirmed';
           currentOrder.returnedAt = currentOrder.completedAt;
           currentOrder.confirmedAt = currentOrder.completedAt;
@@ -1195,9 +1203,15 @@ function createBot(botToken) {
             delete listing.reservedByUserId;
             delete listing.reservedAt;
           }
-        } else {
-          currentOrder.status = 'completed';
+          return { order: currentOrder, rentalEvent: 'returned' };
         }
+
+        if (currentOrder.status !== 'assigned') {
+          return { error: 'Можно завершать только заказ в работе.' };
+        }
+
+        currentOrder.completedAt = new Date().toISOString();
+        currentOrder.status = 'completed';
         return { order: currentOrder };
       });
 
@@ -1206,14 +1220,20 @@ function createBot(botToken) {
         return;
       }
 
-      await ctx.answerCbQuery(result.order.listingType === 'rental' ? '✅ Возврат отмечен.' : '✅ Запрос отмечен выполненным.');
+      await ctx.answerCbQuery(result.order.listingType === 'rental' ? '✅ Статус аренды обновлен.' : '✅ Запрос отмечен выполненным.');
       await ctx.reply(
-        result.order.listingType === 'rental'
+        result.rentalEvent === 'handed_over'
+          ? `🧰 Передача вещи по заказу #${orderId} отмечена. Клиенту отправлена кнопка "Готов вернуть".`
+          : result.rentalEvent === 'returned'
           ? `✅ Возврат вещи по заказу #${orderId} подтвержден. Вещь снова активна в предложениях. Клиенту отправлена оценка аренды.`
           : `✅ Запрос #${orderId} отмечен выполненным и отправлен клиенту на подтверждение.`,
         getMainKeyboard(user)
       );
-      await notifyClientOrderCompleted(bot, result.order);
+      if (result.rentalEvent === 'handed_over') {
+        await notifyClientRentalHandedOver(bot, result.order);
+      } else {
+        await notifyClientOrderCompleted(bot, result.order);
+      }
       return;
     }
 
@@ -1375,6 +1395,49 @@ function createBot(botToken) {
     await notifyProviderOrderCancelled(bot, result.order);
   });
 
+  bot.action(/^request_return:(.+)$/, async (ctx) => {
+    const orderId = ctx.match[1];
+    const user = await getUserByTelegramId(ctx.from.id);
+
+    const result = await withDb((db) => {
+      const order = db.orders.find((item) => item.id === orderId);
+      if (!order) {
+        return { error: 'Заказ не найден.' };
+      }
+
+      if (order.listingType !== 'rental') {
+        return { error: 'Это не аренда вещи.' };
+      }
+
+      if (!user || order.clientUserId !== user.id) {
+        return { error: 'Вернуть вещь может только клиент.' };
+      }
+
+      if (order.status !== 'rented') {
+        return { error: 'Вернуть можно только вещь, которая уже передана в аренду.' };
+      }
+
+      order.status = 'return_requested';
+      order.returnRequestedAt = new Date().toISOString();
+      return { order };
+    });
+
+    if (result.error) {
+      await ctx.answerCbQuery(result.error);
+      return;
+    }
+
+    await ctx.answerCbQuery('Владелец получил уведомление.');
+    await ctx.reply(
+      [
+        `↩️ По заказу #${orderId} отмечено: вы готовы вернуть вещь.`,
+        'Когда владелец получит вещь обратно, он закроет аренду и бот предложит оценить аренду.',
+      ].join('\n'),
+      getMainKeyboard(user)
+    );
+    await notifyProviderRentalReturnRequested(bot, result.order);
+  });
+
   bot.action(/^cancel_booking:(.+)$/, async (ctx) => {
     const orderId = ctx.match[1];
     const user = await getUserByTelegramId(ctx.from.id);
@@ -1394,7 +1457,7 @@ function createBot(botToken) {
       }
 
       if (order.status !== 'assigned') {
-        return { error: 'Бронь можно отменить только до возврата вещи.' };
+        return { error: 'Бронь можно отменить только до передачи вещи.' };
       }
 
       order.status = 'cancelled';

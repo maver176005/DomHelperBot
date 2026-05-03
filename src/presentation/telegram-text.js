@@ -109,6 +109,14 @@ function rentalOrderStatusLabel(status) {
     return 'Забронирована';
   }
 
+  if (status === 'rented') {
+    return 'Вещь в аренде';
+  }
+
+  if (status === 'return_requested') {
+    return 'Клиент готов вернуть вещь';
+  }
+
   if (status === 'completed') {
     return 'Возврат отмечен владельцем';
   }

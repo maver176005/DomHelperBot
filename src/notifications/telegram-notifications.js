@@ -1,6 +1,9 @@
 const { Markup } = require('telegraf');
 const { statusLabel } = require('../domain/order-helpers');
-const { getOrderRatingInlineKeyboard } = require('../presentation/telegram-keyboards');
+const {
+  getOrderInlineKeyboard,
+  getOrderRatingInlineKeyboard,
+} = require('../presentation/telegram-keyboards');
 const {
   publicOrderText,
   compactUserLabel,
@@ -75,6 +78,23 @@ function providerOrderCancelledText(order) {
   ].join('\n');
 }
 
+function clientRentalHandedOverText(order) {
+  return [
+    `🧰 Владелец отметил передачу вещи по заказу #${order.id}.`,
+    `📌 Статус аренды: ${rentalOrderStatusLabel(order.status)}`,
+    'Когда закончите пользоваться вещью, нажмите "Готов вернуть".',
+  ].join('\n');
+}
+
+function providerRentalReturnRequestedText(order, client) {
+  return [
+    `↩️ Клиент готов вернуть вещь по заказу #${order.id}.`,
+    client ? `👤 Клиент: ${compactUserLabel(client) || 'без имени'}` : null,
+    `📌 Статус аренды: ${rentalOrderStatusLabel(order.status)}`,
+    'Когда вещь фактически вернется к вам, нажмите "Вещь вернулась".',
+  ].filter(Boolean).join('\n');
+}
+
 async function notifyProviders(bot, order, options = {}) {
   const db = await (options.readDb || readDb)();
   const client = db.users.find((user) => user.id === order.clientUserId);
@@ -140,6 +160,31 @@ async function notifyClientOrderCompleted(bot, order, options = {}) {
   });
 }
 
+async function notifyClientRentalHandedOver(bot, order, options = {}) {
+  const db = await (options.readDb || readDb)();
+  const client = db.users.find((user) => user.id === order.clientUserId);
+  if (!client) {
+    return;
+  }
+
+  await bot.telegram.sendMessage(client.telegramId, clientRentalHandedOverText(order), {
+    ...getOrderInlineKeyboard(order, client),
+  });
+}
+
+async function notifyProviderRentalReturnRequested(bot, order, options = {}) {
+  const db = await (options.readDb || readDb)();
+  const provider = db.users.find((user) => user.id === order.providerUserId);
+  const client = db.users.find((user) => user.id === order.clientUserId);
+  if (!provider) {
+    return;
+  }
+
+  await bot.telegram.sendMessage(provider.telegramId, providerRentalReturnRequestedText(order, client), {
+    ...getOrderInlineKeyboard(order, provider),
+  });
+}
+
 async function notifyProviderOrderConfirmed(bot, order, options = {}) {
   const db = await (options.readDb || readDb)();
   const provider = db.users.find((user) => user.id === order.providerUserId);
@@ -167,11 +212,15 @@ module.exports = {
   clientOrderAssignedText,
   clientOrderCompletedPhotoCaption,
   clientOrderCompletedText,
+  clientRentalHandedOverText,
   notifyClientOrderAssigned,
   notifyClientOrderCompleted,
+  notifyClientRentalHandedOver,
   notifyProviderOrderCancelled,
   notifyProviderOrderConfirmed,
+  notifyProviderRentalReturnRequested,
   notifyProviders,
+  providerRentalReturnRequestedText,
   providerOrderCancelledText,
   providerOrderConfirmedText,
 };
