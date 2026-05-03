@@ -306,7 +306,7 @@ async function showOrdersByRoleSections(ctx, db, user, orders) {
 
     for (const order of section.items) {
       const summary = buildOrderSummary(order, db, user);
-      const inlineKeyboard = getOrderInlineKeyboard(order, user);
+      const inlineKeyboard = getOrderInlineKeyboard(order, user, { showOpen: false });
       await ctx.reply(summary, {
         ...getMainKeyboard(user),
         ...(inlineKeyboard || {}),

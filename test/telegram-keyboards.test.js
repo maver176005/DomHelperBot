@@ -66,7 +66,7 @@ test('profile inline keyboard switches to the opposite role', () => {
   assert.match(rows[0][0].text, /исполнитель/);
 });
 
-test('order inline keyboard reflects order actions for client', () => {
+test('order inline keyboard can include open action for compact contexts', () => {
   const order = {
     id: 'order_1',
     type: 'trash_removal',
