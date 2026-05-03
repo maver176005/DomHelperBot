@@ -55,6 +55,9 @@
 - подготовлен PM2-конфиг и инструкция переноса бота на REG.RU VPS
 - storage-слой подготовлен к Railway Postgres через `DATABASE_URL`
 - `DATABASE_URL` включен в Railway Variables, бот запущен и работает на Railway
+- Railway `Wait for CI` включен, deploy идет только после зеленого GitHub Actions CI
+- Railway `Serverless` выключен у `DomHelperBot` и Postgres, потому что Telegram polling и БД должны быть постоянно доступны
+- storage-слой повторяет transient-подключения к Postgres после простоя
 - зафиксирован go-to-market через объявление в подъезде и QR-код
 
 ## Бизнес-правила, которые уже соблюдаются
@@ -94,3 +97,4 @@
 - `src/index.js` все еще большой и логически просится на дальнейшее разделение
 - статусы заказа частично ближе к продукту, чем к строгой state-machine
 - нет автоматических тестов Telegram-сценариев
+- Railway production зависит от постоянно включенных сервисов; включать `Serverless` обратно нельзя без смены polling на webhook/HTTP-модель

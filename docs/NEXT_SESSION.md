@@ -4,21 +4,23 @@
 
 ## Первый шаг
 
-Проверить production persistence на Railway Postgres.
+Проверить стабильность production после выключения Railway `Serverless`.
 
 Подробный план: [DATABASE_PLAN.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DATABASE_PLAN.md).
 
 ## Почему это первое
 
 Бот снова работает на Railway, `DATABASE_URL` добавлен, storage-слой переключен на Postgres-backed JSONB state-store.
-Теперь нужно подтвердить не только старт процесса, но и сохранение данных после redeploy.
+`Wait for CI` включен, `Serverless` выключен у `DomHelperBot` и Postgres. Теперь нужно подтвердить, что первый клик после простоя отвечает сразу, а данные сохраняются после redeploy.
 
 ## Проверить в начале сессии
 
 - GitHub Actions `CI` зеленый после последнего push.
 - Railway deployment активный.
 - В логах есть `DomHelperBot started`.
+- `Serverless` выключен у `DomHelperBot` и Postgres.
 - В Telegram бот отвечает на `/start`.
+- Первый клик после паузы не дает "Что-то пошло не так".
 - После тестовой регистрации данные остаются после `Redeploy`.
 - В Railway Postgres есть таблица `app_state`.
 

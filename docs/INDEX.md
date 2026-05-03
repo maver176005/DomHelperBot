@@ -32,7 +32,7 @@
    Полный цикл GitHub Actions и Railway autodeploy.
 
 10. [NEXT_SESSION.md](/Users/mac/WebstormProjects/DomHelperBot/docs/NEXT_SESSION.md)
-    Первый шаг следующей сессии: подключить постоянную БД.
+    Первый шаг следующей сессии: проверить стабильность Railway после выключения `Serverless`.
 
 11. [DATABASE_PLAN.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DATABASE_PLAN.md)
     План миграции с `data/db.json` на Railway Postgres.
@@ -70,12 +70,12 @@
   открой `docs/DEPLOYMENT.md`
 
 - Переносишь бота с Railway на REG.RU:
-  открой `docs/REG_RU_DEPLOYMENT.md`
+  открой `docs/REG_RU_DEPLOYMENT.md` и помни, что это только резервный план после проверки `api.telegram.org`
 
 - Начинаешь новую рабочую сессию:
   открой `docs/NEXT_SESSION.md`
 
-- Подключаешь постоянную БД:
+- Работаешь с постоянной БД:
   открой `docs/DATABASE_PLAN.md`
 
 - Нужно показать продукт жильцу или старшему по дому:

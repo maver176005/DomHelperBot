@@ -185,3 +185,17 @@ Live deploy меняет приоритеты. После выхода в Railwa
 ### Новое правило
 
 Для внешних storage-зависимостей добавлять ограниченный retry только на transient connection errors (`ETIMEDOUT`, `ECONNREFUSED`, `ECONNRESET`, `ENETUNREACH`, `EAI_AGAIN`). Не ретраить бизнес-ошибки и SQL-ошибки.
+
+## 2026-05-03 — Polling-бот нельзя держать в Railway Serverless
+
+### Ошибка
+
+В Railway `Serverless` был включен и у `DomHelperBot`, и у Postgres. После простоя первый клик в Telegram мог отвечать ошибкой, а со второго раза сценарий работал. Для polling-бота sleep-режим конфликтует с моделью постоянного `getUpdates`, а sleep Postgres добавляет холодный старт БД.
+
+### Урок
+
+Telegram polling — это long-running worker, а не HTTP-сервис, который можно надежно разбудить входящим запросом. Для такого runtime экономия через sleep ломает пользовательский сценарий сильнее, чем экономит ресурсы.
+
+### Новое правило
+
+Для Telegram polling production держать Railway `Serverless` выключенным у bot service и его основной БД. `Wait for CI` можно и нужно включать, но sleep/serverless использовать только после перехода на webhook/HTTP-модель или отдельный wakeup design.

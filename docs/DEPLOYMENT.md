@@ -16,7 +16,7 @@ git push
 
 Дальше GitHub Actions запускает проверки, Railway автоматически деплоит бота из подключенной ветки, а GitHub Pages публикует статический лендинг из `landing/`.
 
-Текущий статус: Railway снова основной runtime бота. `DATABASE_URL` подключен к Railway Postgres, storage-слой пишет в Postgres-backed JSONB state-store. Лендинг публикуется через GitHub Pages.
+Текущий статус: Railway Hobby — основной runtime бота. `DATABASE_URL` подключен к Railway Postgres, storage-слой пишет в Postgres-backed JSONB state-store. `Wait for CI` включен. `Serverless` выключен у `DomHelperBot` и Postgres. Лендинг публикуется через GitHub Pages.
 
 ## Что уже лежит в репозитории
 
@@ -61,6 +61,15 @@ git push
    - `main`, если ветка будет переименована.
 5. Включить GitHub autodeploy для выбранной ветки.
 6. Включить `Wait for CI`, чтобы Railway деплоил только после успешного GitHub Actions workflow.
+7. Выключить `Serverless` у сервиса `DomHelperBot`.
+8. Выключить `Serverless` у Postgres service.
+
+Почему `Serverless` должен быть выключен:
+
+- Telegram-бот работает через polling, ему нужен постоянно живой Node.js-процесс.
+- Команда в Telegram не является HTTP-запросом к Railway service и не должна быть механизмом пробуждения.
+- Postgres должен быть доступен с первого пользовательского действия, иначе первый клик после простоя может получить `ETIMEDOUT` или `ECONNREFUSED`.
+- Для экономии расходов лучше использовать usage limits/alerts, а не sleep у polling-бота.
 
 ## Настройка GitHub Pages
 
@@ -131,6 +140,8 @@ DomHelperBot started
 - Ветка deploy trigger совпадает с веткой, куда был push.
 - Если включен `Wait for CI`, workflow `CI` должен успешно завершиться.
 - В service variables задан `BOT_TOKEN`.
+- `Serverless` выключен у `DomHelperBot`, иначе polling-бот может не отвечать после простоя.
+- `Serverless` выключен у Postgres, иначе первый запрос к БД после простоя может падать по timeout/refused.
 
 ## Если лендинг не публикуется
 

@@ -74,6 +74,7 @@
   - `writeDb()`
   - `withDb()`
   - выбор backend: локальный JSON без `DATABASE_URL`, Postgres JSONB state-store при `DATABASE_URL`
+  - retry transient-подключений к Postgres после простоя Railway/Postgres
 
 - `src/presentation/telegram-text.js`
   Чистое форматирование Telegram-текстов без Telegraf handlers.
@@ -110,7 +111,7 @@
   - `listings`
 
 - `.env`
-  Локальный конфиг для `BOT_TOKEN`.
+  Локальный конфиг для `BOT_TOKEN` и опционального `DATABASE_URL`.
 
 - `.env.example`
   Шаблон переменных окружения.
@@ -125,7 +126,7 @@
   Короткий handoff на следующую рабочую сессию.
 
 - `docs/REG_RU_DEPLOYMENT.md`
-  Инструкция переноса Telegram-бота на VPS в REG.RU.
+  Резервная инструкция запуска Telegram-бота на VPS в REG.RU. Не основной production runtime.
 
 - `landing/`
   Статический лендинг, объясняющий пользу бота для жильцов дома.
@@ -201,6 +202,9 @@
 - Если меняется локальное JSON-хранилище или seed-структура данных:
   смотри `src/storage/json-store.js` и `src/config/seed-data.js`
 
+- Если меняется Railway/Postgres storage:
+  смотри `src/storage/json-store.js`, `docs/DEPLOYMENT.md` и `docs/DATABASE_PLAN.md`
+
 - Если меняются действия по заказу:
   смотри handlers:
   - `take_order`
@@ -220,8 +224,8 @@
 
 - Основная Telegram-flow логика пока в одном файле `src/index.js`
 - Нет отдельного слоя сервисов / репозиториев / моделей
-- Нет внешней БД
-- Нет миграций
+- Есть внешний Postgres, но первый этап хранит весь state в одной JSONB-записи
+- Нет миграций нормализованных таблиц
 - Нет админки
 - Нет web-версии с отдельным UI
 

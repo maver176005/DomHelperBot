@@ -67,6 +67,7 @@
 - `telegraf`
 - локальное JSON-хранилище в `data/db.json` без `DATABASE_URL`
 - Railway Postgres JSONB state-store при заданном `DATABASE_URL`
+- Railway Hobby production с выключенным `Serverless` у bot service и Postgres
 
 ## Запуск
 
@@ -115,7 +116,7 @@ npm test
 
 Для GitHub Pages, Railway и общего deployment history см. [docs/DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/DEPLOYMENT.md).
 
-Для переноса бота на VPS в REG.RU см. [docs/REG_RU_DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/REG_RU_DEPLOYMENT.md).
+Для резервного плана запуска на VPS в REG.RU см. [docs/REG_RU_DEPLOYMENT.md](/Users/mac/WebstormProjects/DomHelperBot/docs/REG_RU_DEPLOYMENT.md). REG.RU не является основным production runtime.
 
 ## Лендинг
 
@@ -145,12 +146,12 @@ npm test
 
 ## Ограничения MVP
 
-- Нет полноценной БД.
+- Первый Postgres-этап хранит данные в JSONB state-store, без нормализованных таблиц.
 - Нет веб-админки.
 - Нет платежного модуля.
 - Регистрация и дома упрощены для локального запуска.
 
 ## Позже
 
-- Первым следующим техническим шагом подключить постоянную БД вместо `data/db.json`.
+- Нормализовать Postgres schema из JSONB state-store в таблицы.
 - Нужна web-версия продукта с красивым UI для более удобного пользовательского сценария.
