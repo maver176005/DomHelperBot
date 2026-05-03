@@ -202,6 +202,10 @@ function listingTypeLabel(type) {
 }
 
 function listingStatusLabel(status) {
+  if (status === 'reserved') {
+    return 'Забронировано';
+  }
+
   if (status === 'closed') {
     return 'Закрыто';
   }

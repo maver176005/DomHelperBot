@@ -1482,6 +1482,13 @@ function createBot(botToken) {
       });
       db.orders.push(order);
 
+      if (listing.type === 'rental') {
+        listing.status = 'reserved';
+        listing.reservedByOrderId = order.id;
+        listing.reservedByUserId = user.id;
+        listing.reservedAt = order.createdAt;
+      }
+
       return { listing, order, owner };
     });
 
@@ -1490,8 +1497,13 @@ function createBot(botToken) {
       return;
     }
 
-    await ctx.answerCbQuery('Запрос создан.');
-    await ctx.reply('✅ Запрос создан и сразу назначен автору предложения.', getMainKeyboard(user));
+    await ctx.answerCbQuery('Заказ создан.');
+    await ctx.reply(
+      result.listing.type === 'rental'
+        ? '✅ Заказ создан. Вещь снята из активных предложений, чтобы ее не заказали повторно.'
+        : '✅ Заказ создан и сразу назначен автору предложения.',
+      getMainKeyboard(user)
+    );
     await showOrderDetails(ctx, result.order.id);
 
     try {

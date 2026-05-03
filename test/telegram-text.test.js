@@ -97,6 +97,7 @@ test('listing text formats service and rental offers', () => {
   };
 
   assert.equal(listingTypeLabel('rental'), '🧰 Аренда вещи');
+  assert.match(listingCardText({ ...serviceListing, status: 'reserved' }, client), /Забронировано/);
   assert.match(listingCardText(serviceListing, client), /Соберу шкаф/);
   assert.match(listingCardText(serviceListing, client), /Контакт/);
   assert.match(listingCardText(serviceListing, client, { ownerRatingStats: { average: 4.7, count: 3 } }), /4.7 из 5/);
