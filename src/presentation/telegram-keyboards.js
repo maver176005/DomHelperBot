@@ -146,6 +146,12 @@ function getOrderInlineKeyboard(order, user, options = {}) {
   return Markup.inlineKeyboard(buttons);
 }
 
+function getOrderRatingInlineKeyboard(order) {
+  return Markup.inlineKeyboard([
+    [1, 2, 3, 4, 5].map((score) => Markup.button.callback(`${score} ⭐`, `rate_order:${order.id}:${score}`)),
+  ]);
+}
+
 function getListingsInlineKeyboard() {
   return Markup.inlineKeyboard([
     [Markup.button.callback('🔎 Смотреть предложения дома', 'listings:browse')],
@@ -187,6 +193,7 @@ module.exports = {
   getListingInlineKeyboard,
   getListingsInlineKeyboard,
   getOrderInlineKeyboard,
+  getOrderRatingInlineKeyboard,
   getPaymentKeyboard,
   getPopularServicesInlineKeyboard,
   getProfileInlineKeyboard,

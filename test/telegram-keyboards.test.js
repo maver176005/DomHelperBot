@@ -10,6 +10,7 @@ const {
   getListingsInlineKeyboard,
   getMainKeyboard,
   getOrderInlineKeyboard,
+  getOrderRatingInlineKeyboard,
   getPaymentKeyboard,
   getProfileInlineKeyboard,
   getRequestTypeInlineKeyboard,
@@ -115,6 +116,19 @@ test('order inline keyboard exposes status actions', () => {
 
   assert.equal(clientCallbacks.includes('confirm_order:order_1'), true);
   assert.equal(providerCallbacks.includes('complete_order:order_1'), true);
+});
+
+test('order rating keyboard exposes five scores', () => {
+  const rows = inlineRows(getOrderRatingInlineKeyboard({ id: 'order_1' }));
+  const callbacks = rows.flat().map((button) => button.callback_data);
+
+  assert.deepEqual(callbacks, [
+    'rate_order:order_1:1',
+    'rate_order:order_1:2',
+    'rate_order:order_1:3',
+    'rate_order:order_1:4',
+    'rate_order:order_1:5',
+  ]);
 });
 
 test('order inline keyboard adds repeat for finished client orders', () => {

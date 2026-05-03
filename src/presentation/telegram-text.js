@@ -1,7 +1,9 @@
 const {
   availabilityLabel,
   getOrderDisplayTitle,
+  getProviderRatingStats,
   priceLabel,
+  providerRatingLabel,
   statusLabel,
   urgencyBadge,
   urgencyLabel,
@@ -90,14 +92,24 @@ function assignedOrderText(order, client, house) {
   ].join('\n');
 }
 
-function orderSummaryForClient(order, provider) {
+function compactRatingSuffix(stats) {
+  if (!stats || !stats.count) {
+    return '';
+  }
+
+  return ` · ⭐ ${stats.average.toFixed(1)}`;
+}
+
+function orderSummaryForClient(order, provider, providerRatingStats) {
   if (order.type === 'service') {
     return [
       `${getOrderDisplayTitle(order)} #${order.id}`,
       `💰 Цена: ${priceLabel(order.price)}`,
       `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
       `📌 Статус: ${statusLabel(order.status)}`,
-      provider ? `🧰 Исполнитель: ${compactUserLabel(provider) || 'без имени'}` : '🧰 Исполнитель: еще не назначен',
+      provider
+        ? `🧰 Исполнитель: ${compactUserLabel(provider) || 'без имени'}${compactRatingSuffix(providerRatingStats)}`
+        : '🧰 Исполнитель: еще не назначен',
       `💬 Запрос: ${order.comment || 'без описания'}`,
       `💳 Условия: ${order.paymentMethod || 'договоримся'}`,
     ].join('\n');
@@ -108,7 +120,9 @@ function orderSummaryForClient(order, provider) {
     `💰 Цена: ${priceLabel(order.price)}`,
     `⏰ Срочность: ${urgencyLabel(order.urgencyKey)}`,
     `📌 Статус: ${statusLabel(order.status)}`,
-    provider ? `🧰 Исполнитель: ${compactUserLabel(provider) || 'без имени'}` : '🧰 Исполнитель: еще не назначен',
+    provider
+      ? `🧰 Исполнитель: ${compactUserLabel(provider) || 'без имени'}${compactRatingSuffix(providerRatingStats)}`
+      : '🧰 Исполнитель: еще не назначен',
     `🛍 Пакетов: ${order.bagsCount}`,
     `💬 Комментарий: ${order.comment || 'нет'}`,
     `💳 Оплата: ${order.paymentMethod}`,
@@ -143,12 +157,13 @@ function orderSummaryForProvider(order, client) {
 function buildOrderSummary(order, db, user) {
   const provider = db.users.find((item) => item.id === order.providerUserId);
   const client = db.users.find((item) => item.id === order.clientUserId);
+  const ratingStats = provider ? getProviderRatingStats(db, provider.id, order.houseId) : null;
   return user.role === 'provider'
     ? orderSummaryForProvider(order, client)
-    : orderSummaryForClient(order, provider);
+    : orderSummaryForClient(order, provider, ratingStats);
 }
 
-function profileText(user, house) {
+function profileText(user, house, options = {}) {
   const lines = [
     `👤 Профиль: ${user.name}`,
     `🎭 Роль: ${roleLabel(user.role)}`,
@@ -161,6 +176,7 @@ function profileText(user, house) {
 
   if (user.role === 'provider') {
     lines.push(`🟢 Доступность: ${availabilityLabel(user.availabilityStatus)}`);
+    lines.push(providerRatingLabel(options.ratingStats));
   }
 
   lines.push('');
@@ -190,7 +206,7 @@ function listingStatusLabel(status) {
 }
 
 function listingCardText(listing, owner, options = {}) {
-  const { showOwner = true } = options;
+  const { ownerRatingStats = null, showOwner = true } = options;
   const lines = [
     `${listingTypeLabel(listing.type)} #${listing.id}`,
     `📌 Статус: ${listingStatusLabel(listing.status)}`,
@@ -201,6 +217,7 @@ function listingCardText(listing, owner, options = {}) {
 
   if (showOwner && owner) {
     lines.push(`👤 Автор: ${compactUserLabel(owner) || 'без имени'}`);
+    lines.push(providerRatingLabel(ownerRatingStats));
     lines.push(`📱 Контакт: ${owner.phone || 'не указан'}`);
   }
 

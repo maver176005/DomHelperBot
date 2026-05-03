@@ -69,9 +69,10 @@ test('assigned order text shows apartment after assignment', () => {
 test('build order summary picks user role perspective', () => {
   const db = {
     users: [client, provider],
+    orders: [{ ...trashOrder, status: 'confirmed', rating: { score: 5 } }],
   };
 
-  assert.match(buildOrderSummary(trashOrder, db, { role: 'client' }), /Исполнитель: Петр @petr/);
+  assert.match(buildOrderSummary(trashOrder, db, { role: 'client' }), /Исполнитель: Петр @petr · ⭐ 5.0/);
   assert.match(buildOrderSummary(trashOrder, db, { role: 'provider' }), /Клиент: Анна @anna/);
 });
 
@@ -80,6 +81,7 @@ test('profile text includes provider availability only for providers', () => {
   const clientProfile = profileText({ ...client, role: 'client', phone: '+79991112233' }, house);
 
   assert.match(providerProfile, /Доступность/);
+  assert.match(providerProfile, /Рейтинг: пока нет оценок/);
   assert.doesNotMatch(clientProfile, /Доступность:/);
 });
 
@@ -96,6 +98,7 @@ test('listing text formats service and rental offers', () => {
   assert.equal(listingTypeLabel('rental'), '🧰 Аренда вещи');
   assert.match(listingCardText(serviceListing, client), /Соберу шкаф/);
   assert.match(listingCardText(serviceListing, client), /Контакт/);
+  assert.match(listingCardText(serviceListing, client, { ownerRatingStats: { average: 4.7, count: 3 } }), /4.7 из 5/);
   assert.doesNotMatch(listingCardText(serviceListing, client, { showOwner: false }), /Контакт/);
   assert.match(listingInterestText(serviceListing, client), /Сосед откликнулся/);
   assert.match(listingInterestText(serviceListing, client), /Анна @anna/);

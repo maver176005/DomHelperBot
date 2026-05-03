@@ -3,7 +3,9 @@ const test = require('node:test');
 const {
   getPopularServices,
   getProviderAvailabilityStats,
+  getProviderRatingStats,
   priceLabel,
+  providerRatingLabel,
   statusLabel,
   urgencyPriority,
 } = require('../src/domain/order-helpers');
@@ -51,4 +53,22 @@ test('popular services are scoped by house', () => {
 
   assert.equal(groceries.totalCount, 2);
   assert.equal(pharmacy.totalCount, 0);
+});
+
+test('provider rating stats use confirmed rated orders in house', () => {
+  const db = {
+    orders: [
+      { houseId: 'house_1', providerUserId: 'provider_1', status: 'confirmed', rating: { score: 5 } },
+      { houseId: 'house_1', providerUserId: 'provider_1', status: 'confirmed', rating: { score: 4 } },
+      { houseId: 'house_1', providerUserId: 'provider_1', status: 'completed', rating: { score: 1 } },
+      { houseId: 'house_2', providerUserId: 'provider_1', status: 'confirmed', rating: { score: 1 } },
+      { houseId: 'house_1', providerUserId: 'provider_2', status: 'confirmed', rating: { score: 1 } },
+    ],
+  };
+
+  const stats = getProviderRatingStats(db, 'provider_1', 'house_1');
+
+  assert.deepEqual(stats, { count: 2, average: 4.5 });
+  assert.equal(providerRatingLabel(stats), '⭐ Рейтинг: 4.5 из 5 (2)');
+  assert.equal(providerRatingLabel(getProviderRatingStats(db, 'missing', 'house_1')), '⭐ Рейтинг: пока нет оценок');
 });

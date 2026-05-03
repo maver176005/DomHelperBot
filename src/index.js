@@ -12,6 +12,7 @@ const {
   getOrderDisplayTitle,
   getPopularServices,
   getProviderAvailabilityStats,
+  getProviderRatingStats,
   getServiceTemplate,
   priceLabel,
   statusLabel,
@@ -50,6 +51,7 @@ const {
   getListingsInlineKeyboard,
   getMainKeyboard,
   getOrderInlineKeyboard,
+  getOrderRatingInlineKeyboard,
   getPaymentKeyboard,
   getPopularServicesInlineKeyboard,
   getProfileInlineKeyboard,
@@ -291,8 +293,10 @@ async function showMyHouse(ctx) {
   }
 
   const house = await getHouse(user.houseId);
+  const db = await readDb();
+  const ratingStats = user.role === 'provider' ? getProviderRatingStats(db, user.id, user.houseId) : null;
   await ctx.reply(
-    profileText(user, house),
+    profileText(user, house, { ratingStats }),
     {
       ...getMainKeyboard(user),
       ...getProfileInlineKeyboard(user),
@@ -655,8 +659,9 @@ async function showHouseListings(ctx) {
   await ctx.reply('🔎 Активные предложения дома', getMainKeyboard(user));
   for (const listing of listings) {
     const owner = db.users.find((item) => item.id === listing.ownerUserId);
+    const ownerRatingStats = owner ? getProviderRatingStats(db, owner.id, listing.houseId) : null;
     const inlineKeyboard = getListingInlineKeyboard(listing, user);
-    await ctx.reply(listingCardText(listing, owner), {
+    await ctx.reply(listingCardText(listing, owner, { ownerRatingStats }), {
       ...getMainKeyboard(user),
       ...(inlineKeyboard || {}),
     });
@@ -1079,6 +1084,10 @@ function createBot(botToken) {
         return { error: 'Подтверждение доступно только клиенту.' };
       }
 
+      if (order.status !== 'completed') {
+        return { error: 'Подтверждение доступно после отметки исполнителя о выполнении.' };
+      }
+
       if (order.type === 'trash_removal' && !order.photoAfterFileId) {
         return { error: 'Нельзя подтвердить без фото после.' };
       }
@@ -1094,8 +1103,72 @@ function createBot(botToken) {
     }
 
     await ctx.answerCbQuery('🎉 Заказ подтвержден.');
-    await ctx.reply(`🎉 Заказ #${orderId} подтвержден. Спасибо!`, getMainKeyboard(user));
+    await ctx.reply(
+      [
+        `🎉 Заказ #${orderId} подтвержден. Спасибо!`,
+        'Оцените исполнителя — это поможет соседям выбирать надежных помощников.',
+      ].join('\n'),
+      {
+        ...getMainKeyboard(user),
+        ...getOrderRatingInlineKeyboard(result.order),
+      }
+    );
     await notifyProviderOrderConfirmed(bot, result.order);
+  });
+
+  bot.action(/^rate_order:(.+):([1-5])$/, async (ctx) => {
+    const orderId = ctx.match[1];
+    const score = Number(ctx.match[2]);
+    const user = await getUserByTelegramId(ctx.from.id);
+
+    const result = await withDb((db) => {
+      const order = db.orders.find((item) => item.id === orderId);
+      if (!order) {
+        return { error: 'Заказ не найден.' };
+      }
+
+      if (!user || order.clientUserId !== user.id) {
+        return { error: 'Оценку может поставить только клиент.' };
+      }
+
+      if (order.status !== 'confirmed') {
+        return { error: 'Оценка доступна только после подтверждения заказа.' };
+      }
+
+      if (!order.providerUserId) {
+        return { error: 'У заказа нет исполнителя.' };
+      }
+
+      if (order.rating) {
+        return { error: 'Оценка уже сохранена.' };
+      }
+
+      order.rating = {
+        score,
+        clientUserId: user.id,
+        providerUserId: order.providerUserId,
+        ratedAt: new Date().toISOString(),
+      };
+
+      return {
+        order,
+        ratingStats: getProviderRatingStats(db, order.providerUserId, order.houseId),
+      };
+    });
+
+    if (result.error) {
+      await ctx.answerCbQuery(result.error);
+      return;
+    }
+
+    await ctx.answerCbQuery(`⭐ Оценка ${score} сохранена.`);
+    await ctx.reply(
+      [
+        `⭐ Спасибо, оценка ${score} из 5 сохранена.`,
+        `Рейтинг исполнителя теперь: ${result.ratingStats.average.toFixed(1)} из 5 (${result.ratingStats.count}).`,
+      ].join('\n'),
+      getMainKeyboard(user)
+    );
   });
 
   bot.action(/^cancel_order:(.+)$/, async (ctx) => {

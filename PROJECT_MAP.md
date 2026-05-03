@@ -52,6 +52,7 @@
   - работа с срочностью
   - вычисление популярных услуг
   - вычисление доступности исполнителей
+  - вычисление рейтинга исполнителей по подтвержденным заказам
 
 - `src/domain/registration-validation.js`
   Чистая проверка регистрационных данных.
@@ -198,6 +199,9 @@
 
 - Если меняется общая логика представления заказов и доступности:
   смотри `src/domain/order-helpers.js`
+
+- Если меняется рейтинг исполнителей:
+  смотри `src/domain/order-helpers.js`, `rate_order` handler в `src/index.js`, карточки в `src/presentation/telegram-text.js`
 
 - Если меняется локальное JSON-хранилище или seed-структура данных:
   смотри `src/storage/json-store.js` и `src/config/seed-data.js`

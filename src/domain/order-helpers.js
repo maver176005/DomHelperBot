@@ -61,6 +61,51 @@ function priceLabel(price) {
   return price ? `${price} ₽` : 'не указана';
 }
 
+function getOrderRatingScore(order) {
+  if (order.rating && Number.isInteger(order.rating.score)) {
+    return order.rating.score;
+  }
+
+  if (Number.isInteger(order.ratingScore)) {
+    return order.ratingScore;
+  }
+
+  return null;
+}
+
+function getProviderRatingStats(db, providerUserId, houseId) {
+  const ratedOrders = db.orders.filter((order) => {
+    if (order.providerUserId !== providerUserId) {
+      return false;
+    }
+
+    if (houseId && order.houseId !== houseId) {
+      return false;
+    }
+
+    const score = getOrderRatingScore(order);
+    return order.status === 'confirmed' && score >= 1 && score <= 5;
+  });
+
+  if (!ratedOrders.length) {
+    return { count: 0, average: null };
+  }
+
+  const total = ratedOrders.reduce((sum, order) => sum + getOrderRatingScore(order), 0);
+  return {
+    count: ratedOrders.length,
+    average: Math.round((total / ratedOrders.length) * 10) / 10,
+  };
+}
+
+function providerRatingLabel(stats) {
+  if (!stats || !stats.count) {
+    return '⭐ Рейтинг: пока нет оценок';
+  }
+
+  return `⭐ Рейтинг: ${stats.average.toFixed(1)} из 5 (${stats.count})`;
+}
+
 function getPopularServices(db, houseId) {
   const counts = new Map();
 
@@ -100,8 +145,10 @@ module.exports = {
   getOrderDisplayTitle,
   getPopularServices,
   getProviderAvailabilityStats,
+  getProviderRatingStats,
   getServiceTemplate,
   priceLabel,
+  providerRatingLabel,
   statusLabel,
   urgencyBadge,
   urgencyLabel,
