@@ -66,6 +66,15 @@
   Здесь лежит:
   - сборка заказа из предложения услуги или аренды
 
+- `src/domain/house-helpers.js`
+  Чистая логика домов и адресов.
+  Здесь лежат:
+  - пилотный город `Обнинск`
+  - подписи кнопок добавления дома
+  - нормализация улицы и номера дома
+  - сборка display-адреса
+  - поиск дубля по `normalizedAddress`
+
 - `src/storage/json-store.js`
   Совместимый storage-слой.
   Здесь лежат:
@@ -170,6 +179,9 @@
 - Если меняется сценарий регистрации:
   смотри `REGISTRATION_STEPS` и обработчик `bot.on('text')`
 
+- Если меняется выбор или добавление дома:
+  смотри `src/domain/house-helpers.js`, `REGISTRATION_STEPS.HOUSE*` и registration handler в `src/index.js`
+
 - Если меняются правила проверки данных регистрации:
   смотри `src/domain/registration-validation.js`
 
@@ -203,8 +215,8 @@
 - Если меняется рейтинг исполнителей:
   смотри `src/domain/order-helpers.js`, `rate_order` handler в `src/index.js`, карточки в `src/presentation/telegram-text.js`
 
-- Если меняется локальное JSON-хранилище или seed-структура данных:
-  смотри `src/storage/json-store.js` и `src/config/seed-data.js`
+- Если меняется локальное JSON-хранилище или seed-структура домов:
+  смотри `src/storage/json-store.js`, `src/config/seed-data.js` и `src/domain/house-helpers.js`
 
 - Если меняется Railway/Postgres storage:
   смотри `src/storage/json-store.js`, `docs/DEPLOYMENT.md` и `docs/DATABASE_PLAN.md`

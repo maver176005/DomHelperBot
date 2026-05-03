@@ -18,6 +18,10 @@ function compactUserLabel(user) {
 }
 
 function houseLabel(house) {
+  if (house.title && house.address && house.title.includes(house.address)) {
+    return house.title;
+  }
+
   return `${house.title} (${house.address})`;
 }
 

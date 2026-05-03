@@ -21,6 +21,16 @@ const {
 } = require('./domain/order-helpers');
 const { buildOrderFromListing } = require('./domain/listing-helpers');
 const {
+  ADD_HOUSE_TEXT,
+  CHANGE_HOUSE_TEXT,
+  CONFIRM_HOUSE_TEXT,
+  DEFAULT_PILOT_CITY,
+  buildHouseAddress,
+  buildHouseTitle,
+  buildNormalizedAddress,
+  findHouseByNormalizedAddress,
+} = require('./domain/house-helpers');
+const {
   isValidFloor,
   isValidName,
   isValidPhone,
@@ -78,6 +88,9 @@ const REGISTRATION_STEPS = {
   PHONE: 'registration_phone',
   ROLE: 'registration_role',
   HOUSE: 'registration_house',
+  HOUSE_STREET: 'registration_house_street',
+  HOUSE_NUMBER: 'registration_house_number',
+  HOUSE_CONFIRM: 'registration_house_confirm',
   ENTRANCE: 'registration_entrance',
   FLOOR: 'registration_floor',
   APARTMENT: 'registration_apartment',
@@ -156,6 +169,23 @@ async function getOrder(orderId) {
 
 function generateId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getActiveHouseButtons(db) {
+  const houseButtons = db.houses
+    .filter((house) => house.isActive && house.city === DEFAULT_PILOT_CITY)
+    .sort((left, right) => houseLabel(left).localeCompare(houseLabel(right), 'ru'))
+    .map((house) => [houseLabel(house)]);
+
+  houseButtons.push([ADD_HOUSE_TEXT]);
+  houseButtons.push([CANCEL_TEXT]);
+  return houseButtons;
+}
+
+function setRegistrationHouseAndAskEntrance(ctx, flow, house) {
+  flow.data.houseId = house.id;
+  flow.step = REGISTRATION_STEPS.ENTRANCE;
+  return ctx.reply('🚪 Введите номер подъезда.', getCancelKeyboard());
 }
 
 function isFinishedOrderStatus(status) {
@@ -1621,26 +1651,132 @@ function createBot(botToken) {
         }
 
         flow.data.role = text === 'Исполнитель' ? 'provider' : 'client';
+        flow.data.city = DEFAULT_PILOT_CITY;
         flow.step = REGISTRATION_STEPS.HOUSE;
 
         const db = await readDb();
-        const houseButtons = db.houses.filter((house) => house.isActive).map((house) => [houseLabel(house)]);
-        houseButtons.push([CANCEL_TEXT]);
-        await ctx.reply('🏠 Выберите дом.', Markup.keyboard(houseButtons).resize().oneTime());
+        await ctx.reply(
+          [
+            `🏠 Город пилота: ${DEFAULT_PILOT_CITY}.`,
+            'Выберите дом из списка или добавьте свой.',
+          ].join('\n'),
+          Markup.keyboard(getActiveHouseButtons(db)).resize().oneTime()
+        );
         return;
       }
 
       if (flow.step === REGISTRATION_STEPS.HOUSE) {
-        const db = await readDb();
-        const house = db.houses.find((item) => houseLabel(item) === text);
-        if (!house) {
-          await ctx.reply('🏠 Выберите дом из списка.');
+        if (text === ADD_HOUSE_TEXT) {
+          flow.step = REGISTRATION_STEPS.HOUSE_STREET;
+          await ctx.reply('🏙 Введите улицу в Обнинске без номера дома.', getCancelKeyboard());
           return;
         }
 
-        flow.data.houseId = house.id;
-        flow.step = REGISTRATION_STEPS.ENTRANCE;
-        await ctx.reply('🚪 Введите номер подъезда.', getCancelKeyboard());
+        const db = await readDb();
+        const house = db.houses.find((item) => houseLabel(item) === text);
+        if (!house) {
+          await ctx.reply('🏠 Выберите дом из списка или нажмите "Моего дома нет".');
+          return;
+        }
+
+        await setRegistrationHouseAndAskEntrance(ctx, flow, house);
+        return;
+      }
+
+      if (flow.step === REGISTRATION_STEPS.HOUSE_STREET) {
+        if (text.length < 2 || text.length > 80) {
+          await ctx.reply('🏙 Введите название улицы от 2 до 80 символов.');
+          return;
+        }
+
+        flow.data.houseStreet = text;
+        flow.step = REGISTRATION_STEPS.HOUSE_NUMBER;
+        await ctx.reply('🏠 Введите номер дома и корпус, если есть. Например: 10, 10к1 или 10 корпус 1.', getCancelKeyboard());
+        return;
+      }
+
+      if (flow.step === REGISTRATION_STEPS.HOUSE_NUMBER) {
+        if (!isValidShortAddressPart(text)) {
+          await ctx.reply('🏠 Введите номер дома от 1 до 20 символов.');
+          return;
+        }
+
+        const normalizedAddress = buildNormalizedAddress(
+          DEFAULT_PILOT_CITY,
+          flow.data.houseStreet,
+          text
+        );
+        const db = await readDb();
+        const existingHouse = findHouseByNormalizedAddress(db, normalizedAddress);
+
+        if (existingHouse) {
+          await ctx.reply(
+            [
+              '🏠 Такой дом уже есть в списке.',
+              `Выбрали: ${houseLabel(existingHouse)}`,
+            ].join('\n'),
+            getCancelKeyboard()
+          );
+          await setRegistrationHouseAndAskEntrance(ctx, flow, existingHouse);
+          return;
+        }
+
+        flow.data.houseNumber = text;
+        flow.data.normalizedAddress = normalizedAddress;
+        flow.step = REGISTRATION_STEPS.HOUSE_CONFIRM;
+
+        await ctx.reply(
+          [
+            '🏠 Добавить новый дом?',
+            buildHouseTitle(DEFAULT_PILOT_CITY, flow.data.houseStreet, flow.data.houseNumber),
+          ].join('\n'),
+          Markup.keyboard([[CONFIRM_HOUSE_TEXT], [CHANGE_HOUSE_TEXT], [CANCEL_TEXT]]).resize().oneTime()
+        );
+        return;
+      }
+
+      if (flow.step === REGISTRATION_STEPS.HOUSE_CONFIRM) {
+        if (text === CHANGE_HOUSE_TEXT) {
+          flow.step = REGISTRATION_STEPS.HOUSE_STREET;
+          delete flow.data.houseStreet;
+          delete flow.data.houseNumber;
+          delete flow.data.normalizedAddress;
+          await ctx.reply('🏙 Введите улицу в Обнинске без номера дома.', getCancelKeyboard());
+          return;
+        }
+
+        if (text !== CONFIRM_HOUSE_TEXT) {
+          await ctx.reply('🏠 Подтвердите добавление дома или введите адрес заново.');
+          return;
+        }
+
+        const newHouse = await withDb((db) => {
+          const existingHouse = findHouseByNormalizedAddress(db, flow.data.normalizedAddress);
+          if (existingHouse) {
+            return existingHouse;
+          }
+
+          const house = {
+            id: generateId('house'),
+            title: buildHouseTitle(DEFAULT_PILOT_CITY, flow.data.houseStreet, flow.data.houseNumber),
+            city: DEFAULT_PILOT_CITY,
+            street: flow.data.houseStreet,
+            houseNumber: flow.data.houseNumber,
+            address: buildHouseAddress(flow.data.houseStreet, flow.data.houseNumber),
+            normalizedAddress: flow.data.normalizedAddress,
+            isActive: true,
+            status: 'active',
+            source: 'user',
+            createdByTelegramId: String(ctx.from.id),
+            createdAt: new Date().toISOString(),
+          };
+
+          db.houses.push(house);
+          return house;
+        });
+
+        await ctx.reply(`✅ Дом добавлен: ${houseLabel(newHouse)}`, getCancelKeyboard());
+        await setRegistrationHouseAndAskEntrance(ctx, flow, newHouse);
         return;
       }
 
@@ -1691,7 +1827,7 @@ function createBot(botToken) {
             entrance: flow.data.entrance,
             floor: flow.data.floor,
             apartment: text,
-            isResidentVerified: true,
+            isResidentVerified: false,
             updatedAt: new Date().toISOString(),
           };
 

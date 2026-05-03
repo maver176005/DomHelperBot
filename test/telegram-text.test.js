@@ -50,6 +50,7 @@ test('telegram labels are stable', () => {
   assert.equal(roleLabel('provider'), 'Исполнитель');
   assert.equal(roleLabel('client'), 'Заказчик');
   assert.equal(houseLabel(house), 'ЖК Тест (ул. Проверочная, 1)');
+  assert.equal(houseLabel({ title: 'Обнинск, ул. Ленина, 1', address: 'ул. Ленина, 1' }), 'Обнинск, ул. Ленина, 1');
 });
 
 test('public order text hides apartment before assignment', () => {

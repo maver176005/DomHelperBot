@@ -62,6 +62,11 @@
 - `title text not null`
 - `city text`
 - `address text not null`
+- `street text`
+- `house_number text`
+- `normalized_address text unique`
+- `source text`
+- `created_by_user_id text references users(id)`
 - `is_active boolean not null default true`
 - `created_at timestamptz not null default now()`
 - `updated_at timestamptz not null default now()`
