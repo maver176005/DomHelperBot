@@ -178,8 +178,7 @@ function getListingInlineKeyboard(listing, user) {
   }
 
   return Markup.inlineKeyboard([
-    [Markup.button.callback('Откликнуться', `listing_interest:${listing.id}`)],
-    [Markup.button.callback('Создать запрос', `listing_create_order:${listing.id}`)],
+    [Markup.button.callback('Заказать у соседа', `listing_create_order:${listing.id}`)],
   ]);
 }
 

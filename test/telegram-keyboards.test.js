@@ -169,7 +169,9 @@ test('listing inline keyboard allows owner to close active listing', () => {
 
   const neighborRows = inlineRows(getListingInlineKeyboard(listing, { id: 'user_2', houseId: 'house_1' }));
   const neighborCallbacks = neighborRows.flat().map((button) => button.callback_data);
-  assert.deepEqual(neighborCallbacks, ['listing_interest:listing_1', 'listing_create_order:listing_1']);
+  const neighborLabels = neighborRows.flat().map((button) => button.text);
+  assert.deepEqual(neighborCallbacks, ['listing_create_order:listing_1']);
+  assert.deepEqual(neighborLabels, ['Заказать у соседа']);
 
   assert.equal(getListingInlineKeyboard(listing, { id: 'user_2', houseId: 'house_2' }), undefined);
   assert.equal(getListingInlineKeyboard({ ...listing, status: 'closed' }, { id: 'user_1' }), undefined);
