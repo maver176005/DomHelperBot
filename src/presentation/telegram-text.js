@@ -110,7 +110,7 @@ function rentalOrderStatusLabel(status) {
   }
 
   if (status === 'completed') {
-    return 'Возврат ожидает подтверждения';
+    return 'Возврат отмечен владельцем';
   }
 
   if (status === 'confirmed') {

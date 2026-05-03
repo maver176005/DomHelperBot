@@ -123,9 +123,8 @@ function getOrderInlineKeyboard(order, user, options = {}) {
     buttons.push([Markup.button.callback('Отменить заказ', `cancel_order:${order.id}`)]);
   }
 
-  if (order.clientUserId === user.id && order.status === 'completed') {
-    const confirmText = order.listingType === 'rental' ? 'Подтвердить возврат' : 'Подтвердить выполнение';
-    buttons.push([Markup.button.callback(confirmText, `confirm_order:${order.id}`)]);
+  if (order.clientUserId === user.id && order.status === 'completed' && order.listingType !== 'rental') {
+    buttons.push([Markup.button.callback('Подтвердить выполнение', `confirm_order:${order.id}`)]);
   }
 
   if (order.providerUserId === user.id && order.status === 'assigned') {

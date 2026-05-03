@@ -82,7 +82,7 @@ const order = {
 test('notification text builders include key order details', () => {
   assert.match(clientOrderAssignedText({ ...order, status: 'assigned' }, { name: 'Петр' }), /Запрос #order_1/);
   assert.match(clientOrderCompletedText({ ...order, status: 'completed' }), /Ожидает подтверждения клиента/);
-  assert.match(clientOrderCompletedText({ ...order, listingType: 'rental', status: 'completed' }), /возврат вещи/);
+  assert.match(clientOrderCompletedText({ ...order, listingType: 'rental', status: 'confirmed' }), /Оцените аренду/);
   assert.match(clientOrderCompletedPhotoCaption({ ...order, status: 'completed' }), /фото после/);
   assert.match(providerOrderConfirmedText({ ...order, status: 'confirmed' }, { name: 'Анна' }), /Клиент подтвердил/);
   assert.match(providerOrderCancelledText({ ...order, status: 'cancelled' }), /отменен клиентом/);
@@ -123,4 +123,18 @@ test('notifyClientOrderCompleted sends photo after when present', async () => {
   assert.equal(calls[0].args[0], '100');
   assert.equal(calls[0].args[1], 'photo_after');
   assert.match(calls[0].args[2].caption, /Подтвердите выполнение/);
+});
+
+test('notifyClientOrderCompleted asks client to rate returned rental', async () => {
+  const { bot, calls } = createBotSpy();
+  await notifyClientOrderCompleted(
+    bot,
+    { ...order, type: 'service', listingType: 'rental', status: 'confirmed' },
+    { readDb: createDb }
+  );
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'sendMessage');
+  assert.match(calls[0].args[1], /Владелец подтвердил возврат/);
+  assert.equal(calls[0].args[2].reply_markup.inline_keyboard[0][0].callback_data, 'rate_order:order_1:1');
 });

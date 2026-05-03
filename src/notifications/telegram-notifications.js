@@ -1,6 +1,11 @@
 const { Markup } = require('telegraf');
 const { statusLabel } = require('../domain/order-helpers');
-const { publicOrderText, compactUserLabel } = require('../presentation/telegram-text');
+const { getOrderRatingInlineKeyboard } = require('../presentation/telegram-keyboards');
+const {
+  publicOrderText,
+  compactUserLabel,
+  rentalOrderStatusLabel,
+} = require('../presentation/telegram-text');
 const { readDb } = require('../storage/json-store');
 
 function providerTakeOrderKeyboard(order) {
@@ -26,9 +31,9 @@ function clientOrderAssignedText(order, provider) {
 function clientOrderCompletedText(order) {
   if (order.listingType === 'rental') {
     return [
-      `✅ Владелец отметил возврат вещи по заказу #${order.id}.`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-      'Подтвердите возврат, если вещь действительно вернулась.',
+      `✅ Владелец подтвердил возврат вещи по заказу #${order.id}.`,
+      `📌 Статус аренды: ${rentalOrderStatusLabel(order.status)}`,
+      'Оцените аренду — это поможет соседям выбирать надежных владельцев вещей.',
     ].join('\n');
   }
 
@@ -43,8 +48,8 @@ function clientOrderCompletedPhotoCaption(order) {
   if (order.listingType === 'rental') {
     return [
       `📸 Фото по возврату вещи #${order.id}.`,
-      `📌 Статус: ${statusLabel(order.status)}`,
-      '✅ Подтвердите возврат.',
+      `📌 Статус аренды: ${rentalOrderStatusLabel(order.status)}`,
+      'Оцените аренду.',
     ].join('\n');
   }
 
@@ -118,7 +123,9 @@ async function notifyClientOrderCompleted(bot, order, options = {}) {
     return;
   }
 
-  const buttons = confirmOrderKeyboard(order);
+  const buttons = order.listingType === 'rental'
+    ? getOrderRatingInlineKeyboard(order)
+    : confirmOrderKeyboard(order);
 
   if (order.photoAfterFileId) {
     await bot.telegram.sendPhoto(client.telegramId, order.photoAfterFileId, {

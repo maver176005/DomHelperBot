@@ -103,7 +103,8 @@ test('rental order summary uses booking language', () => {
   assert.doesNotMatch(text, /Цена: не указана/);
   assert.doesNotMatch(text, /Срочность/);
   assert.doesNotMatch(text, /В работе/);
-  assert.equal(rentalOrderStatusLabel('completed'), 'Возврат ожидает подтверждения');
+  assert.equal(rentalOrderStatusLabel('completed'), 'Возврат отмечен владельцем');
+  assert.equal(rentalOrderStatusLabel('confirmed'), 'Возврат подтвержден');
 });
 
 test('profile text includes provider availability only for providers', () => {

@@ -1181,10 +1181,11 @@ function createBot(botToken) {
           return { error: 'Можно завершать только заказ в работе.' };
         }
 
-        currentOrder.status = 'completed';
         currentOrder.completedAt = new Date().toISOString();
         if (currentOrder.listingType === 'rental') {
+          currentOrder.status = 'confirmed';
           currentOrder.returnedAt = currentOrder.completedAt;
+          currentOrder.confirmedAt = currentOrder.completedAt;
           const listing = db.listings.find((item) => item.id === currentOrder.listingId);
           if (listing) {
             listing.status = 'active';
@@ -1194,6 +1195,8 @@ function createBot(botToken) {
             delete listing.reservedByUserId;
             delete listing.reservedAt;
           }
+        } else {
+          currentOrder.status = 'completed';
         }
         return { order: currentOrder };
       });
@@ -1206,7 +1209,7 @@ function createBot(botToken) {
       await ctx.answerCbQuery(result.order.listingType === 'rental' ? '✅ Возврат отмечен.' : '✅ Запрос отмечен выполненным.');
       await ctx.reply(
         result.order.listingType === 'rental'
-          ? `✅ Возврат вещи по заказу #${orderId} отмечен и отправлен клиенту на подтверждение.`
+          ? `✅ Возврат вещи по заказу #${orderId} подтвержден. Вещь снова активна в предложениях. Клиенту отправлена оценка аренды.`
           : `✅ Запрос #${orderId} отмечен выполненным и отправлен клиенту на подтверждение.`,
         getMainKeyboard(user)
       );
@@ -1236,6 +1239,10 @@ function createBot(botToken) {
 
       if (!user || order.clientUserId !== user.id) {
         return { error: 'Подтверждение доступно только клиенту.' };
+      }
+
+      if (order.listingType === 'rental') {
+        return { error: 'Возврат вещи подтверждает владелец.' };
       }
 
       if (order.status !== 'completed') {

@@ -127,9 +127,9 @@ test('rental order keyboard exposes booking actions', () => {
     clientUserId: 'client_1',
     providerUserId: 'provider_1',
   };
-  const completedRental = {
+  const confirmedRental = {
     ...assignedRental,
-    status: 'completed',
+    status: 'confirmed',
   };
 
   const clientAssigned = inlineRows(getOrderInlineKeyboard(assignedRental, { id: 'client_1' }))
@@ -138,7 +138,7 @@ test('rental order keyboard exposes booking actions', () => {
   const providerAssigned = inlineRows(getOrderInlineKeyboard(assignedRental, { id: 'provider_1' }))
     .flat()
     .map((button) => [button.text, button.callback_data]);
-  const clientCompleted = inlineRows(getOrderInlineKeyboard(completedRental, { id: 'client_1' }))
+  const clientConfirmed = inlineRows(getOrderInlineKeyboard(confirmedRental, { id: 'client_1' }))
     .flat()
     .map((button) => [button.text, button.callback_data]);
 
@@ -151,9 +151,8 @@ test('rental order keyboard exposes booking actions', () => {
     ['Вещь вернулась', 'complete_order:order_1'],
     ['Отменить бронь', 'cancel_booking:order_1'],
   ]);
-  assert.deepEqual(clientCompleted, [
+  assert.deepEqual(clientConfirmed, [
     ['Открыть заказ', 'view_order:order_1'],
-    ['Подтвердить возврат', 'confirm_order:order_1'],
   ]);
 });
 
