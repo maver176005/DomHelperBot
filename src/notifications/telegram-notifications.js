@@ -5,7 +5,7 @@ const { readDb } = require('../storage/json-store');
 
 function providerTakeOrderKeyboard(order) {
   return Markup.inlineKeyboard([
-    Markup.button.callback('Взять запрос', `take_order:${order.id}`),
+    Markup.button.callback('Взять заказ', `take_order:${order.id}`),
   ]);
 }
 

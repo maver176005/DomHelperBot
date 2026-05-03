@@ -1469,14 +1469,14 @@ function createBot(botToken) {
         await ctx.replyWithPhoto(order.photoBeforeFileId, {
           caption: publicOrderText(order, client, house),
           ...Markup.inlineKeyboard([
-            Markup.button.callback('Взять запрос', `take_order:${order.id}`),
+            Markup.button.callback('Взять заказ', `take_order:${order.id}`),
           ]),
         });
       } else {
         await ctx.reply(publicOrderText(order, client, house), {
           ...getMainKeyboard(user),
           ...Markup.inlineKeyboard([
-            Markup.button.callback('Взять запрос', `take_order:${order.id}`),
+            Markup.button.callback('Взять заказ', `take_order:${order.id}`),
           ]),
         });
       }

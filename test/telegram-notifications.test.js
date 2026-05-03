@@ -96,6 +96,7 @@ test('notifyProviders sends only to providers from the same house', async () => 
   assert.equal(calls[0].method, 'sendMessage');
   assert.equal(calls[0].args[0], '200');
   assert.match(calls[0].args[1], /Квартира: скрыта/);
+  assert.equal(calls[0].args[2].reply_markup.inline_keyboard[0][0].text, 'Взять заказ');
 });
 
 test('notifyProviders sends photo when order has before photo', async () => {
