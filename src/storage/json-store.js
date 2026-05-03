@@ -6,6 +6,14 @@ const { DEFAULT_DB } = require('../config/seed-data');
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const DB_PATH = path.join(DATA_DIR, 'db.json');
 const APP_STATE_ID = 'default';
+const POSTGRES_CONNECT_RETRY_DELAYS_MS = [500, 1500, 3000];
+const TRANSIENT_POSTGRES_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ENETUNREACH',
+  'ETIMEDOUT',
+  'EAI_AGAIN',
+]);
 
 let pool;
 
@@ -21,6 +29,7 @@ function getPool() {
   if (!pool) {
     pool = new Pool({
       connectionString: getDatabaseUrl(),
+      connectionTimeoutMillis: 5000,
       ssl: getDatabaseUrl().includes('sslmode=disable') ? false : { rejectUnauthorized: false },
     });
   }
@@ -30,6 +39,59 @@ function getPool() {
 
 function usesPostgres() {
   return Boolean(getDatabaseUrl());
+}
+
+function isTransientPostgresError(error) {
+  if (!error) {
+    return false;
+  }
+
+  if (TRANSIENT_POSTGRES_ERROR_CODES.has(error.code)) {
+    return true;
+  }
+
+  if (Array.isArray(error.errors)) {
+    return error.errors.some(isTransientPostgresError);
+  }
+
+  return false;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function resetPool() {
+  if (!pool) {
+    return;
+  }
+
+  const currentPool = pool;
+  pool = null;
+  await currentPool.end().catch(() => {});
+}
+
+async function connectPostgresClient() {
+  let lastError;
+
+  for (let attempt = 0; attempt <= POSTGRES_CONNECT_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await getPool().connect();
+    } catch (error) {
+      lastError = error;
+
+      if (!isTransientPostgresError(error) || attempt === POSTGRES_CONNECT_RETRY_DELAYS_MS.length) {
+        throw error;
+      }
+
+      await resetPool();
+      await sleep(POSTGRES_CONNECT_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+
+  throw lastError;
 }
 
 function ensureJsonDb() {
@@ -53,7 +115,7 @@ function writeJsonDb(db) {
 }
 
 async function ensurePostgresDb() {
-  const client = await getPool().connect();
+  const client = await connectPostgresClient();
   try {
     await client.query(`
       CREATE TABLE IF NOT EXISTS app_state (
@@ -100,7 +162,7 @@ async function readDb() {
   }
 
   await ensurePostgresDb();
-  const client = await getPool().connect();
+  const client = await connectPostgresClient();
   try {
     return await readPostgresDb(client);
   } finally {
@@ -135,7 +197,7 @@ async function withDb(mutator) {
   }
 
   await ensurePostgresDb();
-  const client = await getPool().connect();
+  const client = await connectPostgresClient();
 
   try {
     await client.query('BEGIN');
@@ -191,6 +253,7 @@ module.exports = {
   DB_PATH,
   closeDb,
   ensureDb,
+  isTransientPostgresError,
   readDb,
   readDbSyncForTests,
   withDb,
