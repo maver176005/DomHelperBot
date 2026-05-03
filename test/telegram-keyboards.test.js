@@ -118,6 +118,45 @@ test('order inline keyboard exposes status actions', () => {
   assert.equal(providerCallbacks.includes('complete_order:order_1'), true);
 });
 
+test('rental order keyboard exposes booking actions', () => {
+  const assignedRental = {
+    id: 'order_1',
+    type: 'service',
+    listingType: 'rental',
+    status: 'assigned',
+    clientUserId: 'client_1',
+    providerUserId: 'provider_1',
+  };
+  const completedRental = {
+    ...assignedRental,
+    status: 'completed',
+  };
+
+  const clientAssigned = inlineRows(getOrderInlineKeyboard(assignedRental, { id: 'client_1' }))
+    .flat()
+    .map((button) => [button.text, button.callback_data]);
+  const providerAssigned = inlineRows(getOrderInlineKeyboard(assignedRental, { id: 'provider_1' }))
+    .flat()
+    .map((button) => [button.text, button.callback_data]);
+  const clientCompleted = inlineRows(getOrderInlineKeyboard(completedRental, { id: 'client_1' }))
+    .flat()
+    .map((button) => [button.text, button.callback_data]);
+
+  assert.deepEqual(clientAssigned, [
+    ['Открыть заказ', 'view_order:order_1'],
+    ['Отменить бронь', 'cancel_booking:order_1'],
+  ]);
+  assert.deepEqual(providerAssigned, [
+    ['Открыть заказ', 'view_order:order_1'],
+    ['Вещь вернулась', 'complete_order:order_1'],
+    ['Отменить бронь', 'cancel_booking:order_1'],
+  ]);
+  assert.deepEqual(clientCompleted, [
+    ['Открыть заказ', 'view_order:order_1'],
+    ['Подтвердить возврат', 'confirm_order:order_1'],
+  ]);
+});
+
 test('order rating keyboard exposes five scores', () => {
   const rows = inlineRows(getOrderRatingInlineKeyboard({ id: 'order_1' }));
   const callbacks = rows.flat().map((button) => button.callback_data);

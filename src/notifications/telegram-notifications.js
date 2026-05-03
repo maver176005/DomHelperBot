@@ -24,6 +24,14 @@ function clientOrderAssignedText(order, provider) {
 }
 
 function clientOrderCompletedText(order) {
+  if (order.listingType === 'rental') {
+    return [
+      `✅ Владелец отметил возврат вещи по заказу #${order.id}.`,
+      `📌 Статус: ${statusLabel(order.status)}`,
+      'Подтвердите возврат, если вещь действительно вернулась.',
+    ].join('\n');
+  }
+
   return [
     `✅ Исполнитель отметил запрос #${order.id} как выполненный.`,
     `📌 Статус: ${statusLabel(order.status)}`,
@@ -32,6 +40,14 @@ function clientOrderCompletedText(order) {
 }
 
 function clientOrderCompletedPhotoCaption(order) {
+  if (order.listingType === 'rental') {
+    return [
+      `📸 Фото по возврату вещи #${order.id}.`,
+      `📌 Статус: ${statusLabel(order.status)}`,
+      '✅ Подтвердите возврат.',
+    ].join('\n');
+  }
+
   return [
     `📸 Исполнитель прислал фото после по заказу #${order.id}.`,
     `📌 Статус: ${statusLabel(order.status)}`,

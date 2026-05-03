@@ -82,6 +82,7 @@ const order = {
 test('notification text builders include key order details', () => {
   assert.match(clientOrderAssignedText({ ...order, status: 'assigned' }, { name: 'Петр' }), /Запрос #order_1/);
   assert.match(clientOrderCompletedText({ ...order, status: 'completed' }), /Ожидает подтверждения клиента/);
+  assert.match(clientOrderCompletedText({ ...order, listingType: 'rental', status: 'completed' }), /возврат вещи/);
   assert.match(clientOrderCompletedPhotoCaption({ ...order, status: 'completed' }), /фото после/);
   assert.match(providerOrderConfirmedText({ ...order, status: 'confirmed' }, { name: 'Анна' }), /Клиент подтвердил/);
   assert.match(providerOrderCancelledText({ ...order, status: 'cancelled' }), /отменен клиентом/);

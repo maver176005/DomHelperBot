@@ -45,6 +45,7 @@ const {
 const {
   assignedOrderText,
   buildOrderSummary,
+  compactUserLabel,
   houseLabel,
   listingCardText,
   listingInterestText,
@@ -1176,8 +1177,24 @@ function createBot(botToken) {
           return { error: 'Можно завершать только свой запрос.' };
         }
 
+        if (currentOrder.status !== 'assigned') {
+          return { error: 'Можно завершать только заказ в работе.' };
+        }
+
         currentOrder.status = 'completed';
         currentOrder.completedAt = new Date().toISOString();
+        if (currentOrder.listingType === 'rental') {
+          currentOrder.returnedAt = currentOrder.completedAt;
+          const listing = db.listings.find((item) => item.id === currentOrder.listingId);
+          if (listing) {
+            listing.status = 'active';
+            listing.returnedFromOrderId = currentOrder.id;
+            listing.returnedAt = currentOrder.completedAt;
+            delete listing.reservedByOrderId;
+            delete listing.reservedByUserId;
+            delete listing.reservedAt;
+          }
+        }
         return { order: currentOrder };
       });
 
@@ -1186,9 +1203,11 @@ function createBot(botToken) {
         return;
       }
 
-      await ctx.answerCbQuery('✅ Запрос отмечен выполненным.');
+      await ctx.answerCbQuery(result.order.listingType === 'rental' ? '✅ Возврат отмечен.' : '✅ Запрос отмечен выполненным.');
       await ctx.reply(
-        `✅ Запрос #${orderId} отмечен выполненным и отправлен клиенту на подтверждение.`,
+        result.order.listingType === 'rental'
+          ? `✅ Возврат вещи по заказу #${orderId} отмечен и отправлен клиенту на подтверждение.`
+          : `✅ Запрос #${orderId} отмечен выполненным и отправлен клиенту на подтверждение.`,
         getMainKeyboard(user)
       );
       await notifyClientOrderCompleted(bot, result.order);
@@ -1220,7 +1239,7 @@ function createBot(botToken) {
       }
 
       if (order.status !== 'completed') {
-        return { error: 'Подтверждение доступно после отметки исполнителя о выполнении.' };
+        return { error: 'Подтверждение доступно после отметки исполнителя о выполнении или возврате.' };
       }
 
       if (order.type === 'trash_removal' && !order.photoAfterFileId) {
@@ -1240,8 +1259,12 @@ function createBot(botToken) {
     await ctx.answerCbQuery('🎉 Заказ подтвержден.');
     await ctx.reply(
       [
-        `🎉 Заказ #${orderId} подтвержден. Спасибо!`,
-        'Оцените исполнителя — это поможет соседям выбирать надежных помощников.',
+        result.order.listingType === 'rental'
+          ? `🎉 Возврат по заказу #${orderId} подтвержден. Спасибо!`
+          : `🎉 Заказ #${orderId} подтвержден. Спасибо!`,
+        result.order.listingType === 'rental'
+          ? 'Оцените аренду — это поможет соседям выбирать надежных владельцев вещей.'
+          : 'Оцените исполнителя — это поможет соседям выбирать надежных помощников.',
       ].join('\n'),
       {
         ...getMainKeyboard(user),
@@ -1343,6 +1366,80 @@ function createBot(botToken) {
       getMainKeyboard(user)
     );
     await notifyProviderOrderCancelled(bot, result.order);
+  });
+
+  bot.action(/^cancel_booking:(.+)$/, async (ctx) => {
+    const orderId = ctx.match[1];
+    const user = await getUserByTelegramId(ctx.from.id);
+
+    const result = await withDb((db) => {
+      const order = db.orders.find((item) => item.id === orderId);
+      if (!order) {
+        return { error: 'Заказ не найден.' };
+      }
+
+      if (order.listingType !== 'rental') {
+        return { error: 'Это не бронь аренды.' };
+      }
+
+      if (!user || (order.clientUserId !== user.id && order.providerUserId !== user.id)) {
+        return { error: 'Отменить бронь может клиент или владелец вещи.' };
+      }
+
+      if (order.status !== 'assigned') {
+        return { error: 'Бронь можно отменить только до возврата вещи.' };
+      }
+
+      order.status = 'cancelled';
+      order.cancelledAt = new Date().toISOString();
+      order.cancelledByUserId = user.id;
+
+      const listing = db.listings.find((item) => item.id === order.listingId);
+      if (listing) {
+        listing.status = 'active';
+        listing.cancelledBookingOrderId = order.id;
+        listing.cancelledBookingAt = order.cancelledAt;
+        delete listing.reservedByOrderId;
+        delete listing.reservedByUserId;
+        delete listing.reservedAt;
+      }
+
+      return {
+        order,
+        client: db.users.find((item) => item.id === order.clientUserId),
+        provider: db.users.find((item) => item.id === order.providerUserId),
+      };
+    });
+
+    if (result.error) {
+      await ctx.answerCbQuery(result.error);
+      return;
+    }
+
+    const otherUser = user.id === result.order.clientUserId ? result.provider : result.client;
+    await ctx.answerCbQuery('Бронь отменена.');
+    await ctx.reply(
+      [
+        `⚠️ Бронь по заказу #${orderId} отменена.`,
+        'Вещь снова доступна в активных предложениях.',
+      ].join('\n'),
+      getMainKeyboard(user)
+    );
+
+    if (otherUser && otherUser.telegramId) {
+      try {
+        await bot.telegram.sendMessage(
+          otherUser.telegramId,
+          [
+            `⚠️ Бронь по заказу #${orderId} отменена.`,
+            `Кто отменил: ${compactUserLabel(user) || 'сосед'}`,
+            'Вещь снова доступна в активных предложениях.',
+          ].join('\n')
+        );
+      } catch (error) {
+        console.error(`Failed to notify booking cancellation ${otherUser.telegramId}:`, error.message);
+      }
+    }
   });
 
   bot.action('listings:browse', async (ctx) => {

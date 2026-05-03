@@ -124,17 +124,31 @@ function getOrderInlineKeyboard(order, user, options = {}) {
   }
 
   if (order.clientUserId === user.id && order.status === 'completed') {
-    buttons.push([Markup.button.callback('Подтвердить выполнение', `confirm_order:${order.id}`)]);
+    const confirmText = order.listingType === 'rental' ? 'Подтвердить возврат' : 'Подтвердить выполнение';
+    buttons.push([Markup.button.callback(confirmText, `confirm_order:${order.id}`)]);
   }
 
   if (order.providerUserId === user.id && order.status === 'assigned') {
-    const completeText = order.type === 'trash_removal' ? 'Отправить фото после' : 'Отметить выполненным';
+    const completeText = order.listingType === 'rental'
+      ? 'Вещь вернулась'
+      : order.type === 'trash_removal'
+        ? 'Отправить фото после'
+        : 'Отметить выполненным';
     buttons.push([Markup.button.callback(completeText, `complete_order:${order.id}`)]);
+  }
+
+  if (
+    order.listingType === 'rental' &&
+    order.status === 'assigned' &&
+    (order.clientUserId === user.id || order.providerUserId === user.id)
+  ) {
+    buttons.push([Markup.button.callback('Отменить бронь', `cancel_booking:${order.id}`)]);
   }
 
   if (
     order.clientUserId === user.id &&
     (order.type === 'trash_removal' || order.type === 'service') &&
+    order.listingType !== 'rental' &&
     isFinishedOrderStatus(order.status)
   ) {
     buttons.push([Markup.button.callback('Повторить заказ', `repeat_order:${order.id}`)]);
