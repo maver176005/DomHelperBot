@@ -11,6 +11,7 @@ const {
   listingTypeLabel,
   profileText,
   publicOrderText,
+  rentalOrderStatusLabel,
   roleLabel,
 } = require('../src/presentation/telegram-text');
 
@@ -76,6 +77,33 @@ test('build order summary picks user role perspective', () => {
 
   assert.match(buildOrderSummary(trashOrder, db, { role: 'client' }), /Исполнитель: Петр @petr · ⭐ 5.0/);
   assert.match(buildOrderSummary(trashOrder, db, { role: 'provider' }), /Клиент: Анна @anna/);
+});
+
+test('rental order summary uses booking language', () => {
+  const rentalOrder = {
+    id: 'order_2',
+    type: 'service',
+    listingType: 'rental',
+    status: 'assigned',
+    title: 'Аппарат для маникюра',
+    clientUserId: client.id,
+    providerUserId: provider.id,
+    comment: 'Сдам аппарат strong 210',
+    paymentMethod: 'Сутки / 24 часа - 500 руб',
+  };
+  const db = {
+    users: [client, provider],
+    orders: [rentalOrder],
+  };
+  const text = buildOrderSummary(rentalOrder, db, { role: 'client' });
+
+  assert.match(text, /Статус аренды: Забронирована/);
+  assert.match(text, /Владелец: Петр @petr/);
+  assert.match(text, /Условия аренды: Сутки/);
+  assert.doesNotMatch(text, /Цена: не указана/);
+  assert.doesNotMatch(text, /Срочность/);
+  assert.doesNotMatch(text, /В работе/);
+  assert.equal(rentalOrderStatusLabel('completed'), 'Возврат ожидает подтверждения');
 });
 
 test('profile text includes provider availability only for providers', () => {

@@ -104,7 +104,53 @@ function compactRatingSuffix(stats) {
   return ` · ⭐ ${stats.average.toFixed(1)}`;
 }
 
+function rentalOrderStatusLabel(status) {
+  if (status === 'assigned') {
+    return 'Забронирована';
+  }
+
+  if (status === 'completed') {
+    return 'Возврат ожидает подтверждения';
+  }
+
+  if (status === 'confirmed') {
+    return 'Возврат подтвержден';
+  }
+
+  if (status === 'cancelled') {
+    return 'Бронь отменена';
+  }
+
+  return statusLabel(status);
+}
+
+function rentalOrderSummaryForClient(order, owner, ownerRatingStats) {
+  return [
+    `${getOrderDisplayTitle(order)} #${order.id}`,
+    `📌 Статус аренды: ${rentalOrderStatusLabel(order.status)}`,
+    owner
+      ? `👤 Владелец: ${compactUserLabel(owner) || 'без имени'}${compactRatingSuffix(ownerRatingStats)}`
+      : '👤 Владелец: еще не назначен',
+    `💬 Описание: ${order.comment || 'без описания'}`,
+    `💳 Условия аренды: ${order.paymentMethod || 'договоримся'}`,
+  ].join('\n');
+}
+
+function rentalOrderSummaryForProvider(order, client) {
+  return [
+    `${getOrderDisplayTitle(order)} #${order.id}`,
+    `📌 Статус аренды: ${rentalOrderStatusLabel(order.status)}`,
+    `👤 Клиент: ${compactUserLabel(client) || 'без имени'}`,
+    `💬 Описание: ${order.comment || 'без описания'}`,
+    `💳 Условия аренды: ${order.paymentMethod || 'договоримся'}`,
+  ].join('\n');
+}
+
 function orderSummaryForClient(order, provider, providerRatingStats) {
+  if (order.listingType === 'rental') {
+    return rentalOrderSummaryForClient(order, provider, providerRatingStats);
+  }
+
   if (order.type === 'service') {
     return [
       `${getOrderDisplayTitle(order)} #${order.id}`,
@@ -134,6 +180,10 @@ function orderSummaryForClient(order, provider, providerRatingStats) {
 }
 
 function orderSummaryForProvider(order, client) {
+  if (order.listingType === 'rental') {
+    return rentalOrderSummaryForProvider(order, client);
+  }
+
   if (order.type === 'service') {
     return [
       `${getOrderDisplayTitle(order)} #${order.id}`,
@@ -249,7 +299,7 @@ function listingOrderCreatedText(listing, order, client) {
     `🏷 ${listing.title}`,
     `👤 Клиент: ${compactUserLabel(client) || 'без имени'}`,
     `📱 Телефон: ${client.phone || 'не указан'}`,
-    `📌 Статус: ${statusLabel(order.status)}`,
+    `📌 Статус: ${listing.type === 'rental' ? rentalOrderStatusLabel(order.status) : statusLabel(order.status)}`,
   ].join('\n');
 }
 
@@ -290,5 +340,6 @@ module.exports = {
   orderSummaryForProvider,
   profileText,
   publicOrderText,
+  rentalOrderStatusLabel,
   roleLabel,
 };
