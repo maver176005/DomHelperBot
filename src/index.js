@@ -359,7 +359,7 @@ async function showMyHouse(ctx) {
 
   const house = await getHouse(user.houseId);
   const db = await readDb();
-  const ratingStats = user.role === 'provider' ? getProviderRatingStats(db, user.id, user.houseId) : null;
+  const ratingStats = getProviderRatingStats(db, user.id, user.houseId);
   await ctx.reply(
     profileText(user, house, { ratingStats }),
     {
@@ -1337,6 +1337,7 @@ function createBot(botToken) {
 
       return {
         order,
+        ratedUser: db.users.find((item) => item.id === order.providerUserId),
         ratingStats: getProviderRatingStats(db, order.providerUserId, order.houseId),
       };
     });
@@ -1350,10 +1351,28 @@ function createBot(botToken) {
     await ctx.reply(
       [
         `⭐ Спасибо, оценка ${score} из 5 сохранена.`,
-        `Рейтинг исполнителя теперь: ${result.ratingStats.average.toFixed(1)} из 5 (${result.ratingStats.count}).`,
+        result.order.listingType === 'rental'
+          ? `Рейтинг владельца теперь: ${result.ratingStats.average.toFixed(1)} из 5 (${result.ratingStats.count}).`
+          : `Рейтинг исполнителя теперь: ${result.ratingStats.average.toFixed(1)} из 5 (${result.ratingStats.count}).`,
       ].join('\n'),
       getMainKeyboard(user)
     );
+
+    if (result.ratedUser && result.ratedUser.telegramId) {
+      try {
+        await bot.telegram.sendMessage(
+          result.ratedUser.telegramId,
+          [
+            result.order.listingType === 'rental'
+              ? `⭐ Клиент поставил оценку ${score} из 5 за аренду.`
+              : `⭐ Клиент поставил оценку ${score} из 5 за заказ.`,
+            `Текущий рейтинг: ${result.ratingStats.average.toFixed(1)} из 5 (${result.ratingStats.count}).`,
+          ].join('\n')
+        );
+      } catch (error) {
+        console.error(`Failed to notify rated user ${result.ratedUser.telegramId}:`, error.message);
+      }
+    }
   });
 
   bot.action(/^cancel_order:(.+)$/, async (ctx) => {

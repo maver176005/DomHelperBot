@@ -110,12 +110,14 @@ test('rental order summary uses booking language', () => {
 });
 
 test('profile text includes provider availability only for providers', () => {
-  const providerProfile = profileText({ ...client, role: 'provider', phone: '+79991112233' }, house);
-  const clientProfile = profileText({ ...client, role: 'client', phone: '+79991112233' }, house);
+  const ratingStats = { average: 5, count: 1 };
+  const providerProfile = profileText({ ...client, role: 'provider', phone: '+79991112233' }, house, { ratingStats });
+  const clientProfile = profileText({ ...client, role: 'client', phone: '+79991112233' }, house, { ratingStats });
 
   assert.match(providerProfile, /Доступность/);
-  assert.match(providerProfile, /Рейтинг: пока нет оценок/);
+  assert.match(providerProfile, /Рейтинг: 5.0 из 5/);
   assert.doesNotMatch(clientProfile, /Доступность:/);
+  assert.match(clientProfile, /Рейтинг: 5.0 из 5/);
 });
 
 test('listing text formats service and rental offers', () => {

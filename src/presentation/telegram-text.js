@@ -238,6 +238,9 @@ function profileText(user, house, options = {}) {
 
   if (user.role === 'provider') {
     lines.push(`🟢 Доступность: ${availabilityLabel(user.availabilityStatus)}`);
+  }
+
+  if (options.ratingStats) {
     lines.push(providerRatingLabel(options.ratingStats));
   }
 
