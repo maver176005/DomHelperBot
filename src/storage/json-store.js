@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
-const { DEFAULT_DB } = require('../config/seed-data');
+const { DEFAULT_DB, DEFAULT_HOUSES } = require('../config/seed-data');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const DB_PATH = path.join(DATA_DIR, 'db.json');
@@ -19,6 +19,27 @@ let pool;
 
 function cloneDb(db) {
   return JSON.parse(JSON.stringify(db));
+}
+
+function mergeSeedHouses(db) {
+  const nextDb = db || cloneDb(DEFAULT_DB);
+  if (!Array.isArray(nextDb.houses)) {
+    nextDb.houses = [];
+  }
+
+  const existingKeys = new Set(
+    nextDb.houses.map((house) => house.normalizedAddress || house.id).filter(Boolean)
+  );
+
+  for (const house of DEFAULT_HOUSES) {
+    const key = house.normalizedAddress || house.id;
+    if (!existingKeys.has(key)) {
+      nextDb.houses.push(cloneDb(house));
+      existingKeys.add(key);
+    }
+  }
+
+  return nextDb;
 }
 
 function getDatabaseUrl() {
@@ -106,7 +127,9 @@ function ensureJsonDb() {
 
 function readJsonDb() {
   ensureJsonDb();
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+  const db = mergeSeedHouses(JSON.parse(fs.readFileSync(DB_PATH, 'utf8')));
+  writeJsonDb(db);
+  return db;
 }
 
 function writeJsonDb(db) {
@@ -144,16 +167,36 @@ async function readPostgresDb(client) {
     return cloneDb(DEFAULT_DB);
   }
 
-  return result.rows[0].data;
+  return mergeSeedHouses(result.rows[0].data);
+}
+
+async function syncSeedHousesPostgres(client) {
+  const db = await readPostgresDb(client);
+  await client.query(
+    `
+      INSERT INTO app_state (id, data, updated_at)
+      VALUES ($1, $2::jsonb, now())
+      ON CONFLICT (id)
+      DO UPDATE SET data = EXCLUDED.data,
+                    updated_at = now()
+    `,
+    [APP_STATE_ID, JSON.stringify(db)]
+  );
 }
 
 async function ensureDb() {
   if (!usesPostgres()) {
-    ensureJsonDb();
+    readJsonDb();
     return;
   }
 
   await ensurePostgresDb();
+  const client = await connectPostgresClient();
+  try {
+    await syncSeedHousesPostgres(client);
+  } finally {
+    client.release();
+  }
 }
 
 async function readDb() {
@@ -164,7 +207,9 @@ async function readDb() {
   await ensurePostgresDb();
   const client = await connectPostgresClient();
   try {
-    return await readPostgresDb(client);
+    const db = await readPostgresDb(client);
+    await syncSeedHousesPostgres(client);
+    return db;
   } finally {
     client.release();
   }
@@ -254,6 +299,7 @@ module.exports = {
   closeDb,
   ensureDb,
   isTransientPostgresError,
+  mergeSeedHouses,
   readDb,
   readDbSyncForTests,
   withDb,

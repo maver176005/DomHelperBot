@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { DEFAULT_DB, DEFAULT_HOUSES } = require('../src/config/seed-data');
-const { DB_PATH, isTransientPostgresError, readDb } = require('../src/storage/json-store');
+const { DB_PATH, isTransientPostgresError, mergeSeedHouses, readDb } = require('../src/storage/json-store');
 
 test('default db shape contains required collections', () => {
   assert.equal(DEFAULT_HOUSES.length >= 1, true);
@@ -29,4 +29,25 @@ test('postgres transient error detection handles aggregate connection errors', (
 
   assert.equal(isTransientPostgresError(error), true);
   assert.equal(isTransientPostgresError(Object.assign(new Error('syntax'), { code: '42601' })), false);
+});
+
+test('mergeSeedHouses adds current seed houses without deleting existing data', () => {
+  const db = mergeSeedHouses({
+    houses: [
+      {
+        id: 'legacy_house',
+        title: 'Старый дом',
+        normalizedAddress: 'обнинск|старый|1',
+      },
+    ],
+    users: [{ id: 'user_1' }],
+    orders: [{ id: 'order_1' }],
+    listings: [{ id: 'listing_1' }],
+  });
+
+  assert.equal(db.houses.some((house) => house.id === 'legacy_house'), true);
+  assert.equal(db.houses.some((house) => house.normalizedAddress === DEFAULT_HOUSES[0].normalizedAddress), true);
+  assert.deepEqual(db.users, [{ id: 'user_1' }]);
+  assert.deepEqual(db.orders, [{ id: 'order_1' }]);
+  assert.deepEqual(db.listings, [{ id: 'listing_1' }]);
 });
